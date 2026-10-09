@@ -46,8 +46,7 @@ tasks:
       - |
         echo "Common commands (run 'task --list' to see all):"
         echo ""
-        echo "  task dev            Start backend & frontend on free ports"
-        echo "  task backend:dev    Start backend on default port"
+        echo "  task dev            Start Fold client-side development server"
         echo "  task frontend:dev   Start frontend on default port"
         echo "  task desktop:dev    Start desktop app"
         echo "  task check          Quality gate (lint, typecheck, test, etc.)"
@@ -60,28 +59,18 @@ tasks:
     desc: "Install all project dependencies"
     cmds:
       - task: frontend:install
-      - task: engine:install
 
   # ============================================================
   # Development
   # ============================================================
 
   dev:
-    desc: "Start backend + frontend concurrently on free ports"
-    vars:
-      PORTS:
-        sh: '{{if eq OS "windows"}}{{.FIND_FREE_PORT_PS}} 8080 5173{{else}}{{.FIND_FREE_PORT_SH}} 8080 5173{{end}}'
-      BACKEND_PORT: '{{index (splitList "\n" .PORTS) 0}}'
-      FRONTEND_PORT: '{{index (splitList "\n" .PORTS) 1}}'
-    deps:
-      - task: backend:dev
-        vars:
-          PORT: '{{.BACKEND_PORT}}'
+    desc: "Start Fold client-side development server (zero Java dependency)"
+    cmds:
       - task: frontend:dev
         vars:
-          PORT: '{{.FRONTEND_PORT}}'
-          BACKEND_URL: 'http://localhost:{{.BACKEND_PORT}}'
           OPEN: "true"
+
 
   dev:portal:
     desc: "Start backend + editor; the portal is an admin route at /portal"
@@ -244,10 +233,10 @@ tasks:
   # ============================================================
 
   build:
-    desc: "Build all components"
+    desc: "Build Fold client bundle"
     cmds:
-      - task: backend:build
       - task: frontend:build
+
 
   # ============================================================
   # Test

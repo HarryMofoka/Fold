@@ -133,10 +133,9 @@ Fold makes a clear distinction between how and where documents are processed:
                               └──────────────────────────┘
 ```
 
-* **Frontend (`frontend/editor`):** Modern React 19 single-page application built on Vite, Mantine UI components, and Tailwind CSS. Features full in-browser PDF rendering, canvas annotation overlays, and drag-and-drop workspace layout.
-* **Backend (`app/core`, `app/common`):** High-performance Spring Boot application orchestrating Apache PDFBox 3, BouncyCastle cryptographic providers, and external format converters.
-* **Automation Engine (`engine/`):** Python-based utility microservice handling specialized document tasks.
-* **Desktop Client (`frontend/editor/src-tauri`):** Native desktop shell powered by Tauri, binding the frontend to local OS file dialogs and window frames.
+* **Client PDF Engine (`frontend/editor/src/core/services/clientPdfEngine.ts`):** 100% in-browser, zero-server document manipulation engine implemented in TypeScript using `@cantoo/pdf-lib`, WebAssembly (`pdfiumService`), and `JSZip`.
+* **Frontend UI (`frontend/editor`):** Modern React 19 application built on Vite, Mantine UI components, and Tailwind CSS. Features full in-browser PDF rendering, canvas annotation overlays, and drag-and-drop workspace layout.
+* **Desktop Shell (`frontend/editor/src-tauri`):** Lightweight native desktop shell powered by Tauri (Rust), binding the client-side frontend to local OS file dialogs and window frames with minimal memory usage.
 
 ---
 
@@ -144,45 +143,34 @@ Fold makes a clear distinction between how and where documents are processed:
 
 ### Prerequisites
 
-* **Java:** JDK 17 or 21+ (Java 25 supported)
 * **Node.js:** Node.js 20+ and npm 10+
-* **Task Runner (optional but recommended):** [Task](https://taskfile.dev/)
+* **Java:** **Not required!** All PDF processing runs locally in TypeScript and WebAssembly.
 
 ### Running Locally
 
-#### 1. Start Frontend and Backend together with Task:
+#### 1. Quick Start (via Task or npm):
 ```bash
+# Using Task
 task dev
-```
-This automatically allocates free local ports and launches the backend server alongside the Vite development server.
 
-#### 2. Running the Backend independently:
-```bash
-# Windows
-.\gradlew.bat :stirling-pdf:bootRun
-
-# Linux / macOS
-./gradlew :stirling-pdf:bootRun
-```
-The backend API initializes on `http://localhost:8080`.
-
-#### 3. Running the Frontend independently:
-```bash
+# Or directly with npm
 cd frontend
 npm install
 npm run dev --prefix editor
 ```
-The Fold interface starts on `http://localhost:5173` with automatic API proxying to port 8080.
+The Fold interface starts on `http://localhost:5173`. Open the page and begin processing PDFs immediately—no backend or server configuration required!
 
-#### 4. Running as a Unified Bundled Server:
-To run Fold as a single standalone server with the web application pre-packaged into Spring Boot:
+#### 2. Building for Production / Static Hosting:
 ```bash
-# Build frontend bundle into backend static resources
-task backend:build:bundled
+# Using Task
+task build
 
-# Run the unified server
-task backend:dev:bundled
+# Or directly with npm
+cd frontend
+npm run build --prefix editor
 ```
+The compiled, completely static web bundle will be in `frontend/editor/dist/`. You can host it on GitHub Pages, Cloudflare Pages, Vercel, Netlify, or any static file server!
+
 
 ---
 

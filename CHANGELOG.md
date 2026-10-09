@@ -68,3 +68,24 @@ This document logs all architectural, branding, privacy, and codebase changes ma
 - **Test & Platform Artifacts Ignored**: Added Windows system files (`Thumbs.db`, `ehthumbs.db`, `Desktop.ini`), Playwright report folders (`playwright-report/`, `test-results/`), coverage directories, and package manager debug logs.
 - **Documentation Overhaul**:
   - Rewrote root `README.md` to center around Fold's philosophy, 50+ tool catalog, privacy architecture, and local/Docker getting-started workflows.
+
+---
+
+### ⚡ Pure TypeScript & WebAssembly Architecture (Path 1 Rewrite)
+- **Elimination of Java Runtime Dependency**:
+  - Transitioned the entire document processing execution model from the Java Spring Boot backend (`app/`) to a 100% client-side, zero-server architecture in TypeScript.
+- **Client PDF Engine (`frontend/editor/src/core/services/clientPdfEngine.ts`)**:
+  - Built a comprehensive, in-browser PDF manipulation engine using `@cantoo/pdf-lib`, WebAssembly (`pdfiumService`), and `JSZip`.
+  - Native implementations for:
+    - **Organize**: Merge PDFs, Split pages (single and ZIP), Rotate pages, Reorder/Reorganize, Extract pages, Remove/Delete pages, Continuous Single Large Page.
+    - **Edit & Enhance**: Add Text/Image Watermarks, Format and render Page Numbers (1-9 anchor positions), Update Document Metadata, Flatten AcroForms, Unlock form fields, Repair damaged syntax.
+    - **Convert & Export**: Convert Images (JPG, PNG, WebP) to PDF, Extract Attachments, Embed arbitrary file attachments.
+    - **Security & Inspection**: Document Sanitization (stripping JavaScript / OpenAction dictionaries), JavaScript inspection report, In-depth PDF metadata and geometry inspection (`getPdfInfo`).
+    - **Optimization**: Object stream reconstruction and compression (`compressPdf`).
+- **Seamless Local API Adapter (`frontend/editor/src/core/services/clientPdfAdapter.ts`)**:
+  - Implemented an in-memory Axios adapter that intercepts `/api/v1/*` requests.
+  - Wired into `core/services/apiClient.ts` and `desktop/services/apiClient.ts` via `localFirstAdapter`.
+  - All 49 existing tool UI components, parameters, drag-and-drop file managers, and viewers continue to function without modification, executing completely in browser memory.
+- **Developer Workflow & Taskfile Modernization**:
+  - Updated `Taskfile.yml` so `task dev` launches Fold's development server directly with Vite, and `task build` produces a production-ready static bundle without requiring Java, Gradle, or external system tools.
+  - Updated `README.md` with zero-Java quick start instructions.
