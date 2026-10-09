@@ -1,0 +1,7 @@
+ _____ ___  _     ____
+|  ___/ _ \| |   |  _ \
+| |_ | | | | |   | | | |
+|  _|| |_| | |___| |_| |
+|_|   \___/|_____|____/
+Fold — Privacy-First PDF Workspace
+Powered by Spring Boot ${spring-boot.version}
