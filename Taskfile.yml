@@ -9,9 +9,6 @@ vars:
   FIND_FREE_PORT_SH: bash scripts/find-free-port.sh
 
 includes:
-  backend:
-    taskfile: .taskfiles/backend.yml
-    dir: .
   frontend:
     taskfile: .taskfiles/frontend.yml
     dir: frontend
@@ -237,11 +234,9 @@ tasks:
   # ============================================================
 
   test:
-    desc: "Run ALL tests (backend + frontend + engine)"
+    desc: "Run tests"
     cmds:
-      - task: backend:test
       - task: frontend:test
-      - task: engine:test
 
   # ============================================================
   # Lint & Format
@@ -251,7 +246,6 @@ tasks:
     desc: "Run all linters"
     cmds:
       - task: frontend:lint
-      - task: engine:lint
       - task: comment-lint
 
   comment-lint:

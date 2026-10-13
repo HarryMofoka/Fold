@@ -93,4 +93,10 @@ This document logs all architectural, branding, privacy, and codebase changes ma
   - Purged obsolete Python engine (`engine/`), Python cucumber test suites (`testing/cucumber/`), and all legacy `.py` scripts across the entire repository.
   - Rewrote translation status utility into a high-performance, zero-dependency Node.js script: `scripts/counter_translation.mjs`.
   - Repository codebase consolidated strictly into JavaScript and TypeScript.
+- **Total Elimination of Java Backend & Gradle Build Tooling**:
+  - Purged all 2,500+ Java source files and the entire Spring Boot backend (`app/core`, `app/common`, `app/proprietary`).
+  - Removed Gradle wrappers and build scripts (`gradle/`, `gradlew`, `gradlew.bat`, `build.gradle`, `settings.gradle`, `gradle.properties`, `buildSrc/`).
+  - Preserved and relocated all fallback TrueType fonts into `frontend/editor/public/fonts/` for in-browser PDFium WebAssembly rendering.
+  - Removed Java `.taskfiles/backend.yml` and unified `Taskfile.yml` exclusively around the TypeScript frontend.
+
 
