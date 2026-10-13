@@ -89,3 +89,8 @@ This document logs all architectural, branding, privacy, and codebase changes ma
 - **Developer Workflow & Taskfile Modernization**:
   - Updated `Taskfile.yml` so `task dev` launches Fold's development server directly with Vite, and `task build` produces a production-ready static bundle without requiring Java, Gradle, or external system tools.
   - Updated `README.md` with zero-Java quick start instructions.
+- **Total Elimination of Python Files & Unification to JavaScript/TypeScript**:
+  - Purged obsolete Python engine (`engine/`), Python cucumber test suites (`testing/cucumber/`), and all legacy `.py` scripts across the entire repository.
+  - Rewrote translation status utility into a high-performance, zero-dependency Node.js script: `scripts/counter_translation.mjs`.
+  - Repository codebase consolidated strictly into JavaScript and TypeScript.
+
