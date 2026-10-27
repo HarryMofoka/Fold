@@ -1,4 +1,4 @@
-import { defineConfig, type OxlintGlobals } from "oxlint";
+import { defineConfig } from "oxlint";
 
 // Glob for all editor app source, and the two layers that need their own
 // import scope. `no-restricted-imports` is repeated per scope on purpose:
@@ -25,8 +25,7 @@ const noTauriOutsideDesktop = {
 };
 
 // Shared-DS Button/SegmentedControl/Chip family must come from @app/ui, not
-// Mantine. (The raw-<button> ban from the ESLint config used
-// no-restricted-syntax, which oxlint does not implement, so it is dropped.)
+// Mantine.
 const mantineDsPaths = [
   {
     name: "@mantine/core",
@@ -55,7 +54,7 @@ const mantineDsPaths = [
 ];
 
 // Modern JS globals not yet in oxlint's builtin env.
-const modernGlobals: OxlintGlobals = {
+const modernGlobals = {
   AsyncDisposableStack: "readonly",
   DisposableStack: "readonly",
   SuppressedError: "readonly",
@@ -192,9 +191,6 @@ export default defineConfig({
   },
   overrides: [
     {
-      // TS files: core JS rules superseded by the TypeScript compiler are turned
-      // off, and the TS-appropriate replacements are enabled. Mirrors
-      // typescript-eslint's recommended flat config.
       files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       rules: {
         "constructor-super": "off",
@@ -220,7 +216,6 @@ export default defineConfig({
       },
     },
     {
-      // Browser globals for all editor app source.
       files: [APP_SOURCE],
       env: {
         browser: true,
@@ -228,7 +223,6 @@ export default defineConfig({
       globals: modernGlobals,
     },
     {
-      // Node globals for build scripts, config files, and Storybook config.
       files: [
         "scripts/**/*.{js,ts,mjs,mts}",
         "editor/scripts/**/*.{js,ts,mjs,mts}",
@@ -242,8 +236,6 @@ export default defineConfig({
       },
     },
     {
-      // Editor app source (excluding desktop): ban relative/src imports, ban
-      // Tauri (desktop-only), and the shared-DS Mantine import ban.
       files: [APP_SOURCE],
       excludeFiles: [DESKTOP_SOURCE],
       rules: {
@@ -257,8 +249,6 @@ export default defineConfig({
       },
     },
     {
-      // Desktop source: same DS import ban, but Tauri is allowed here (this is
-      // the only layer that may reach @tauri-apps/* directly).
       files: [DESKTOP_SOURCE],
       rules: {
         "no-restricted-imports": [
@@ -271,8 +261,6 @@ export default defineConfig({
       },
     },
     {
-      // Exempt from the shared-DS Mantine import ban: the shared DS itself wraps Mantine,
-      // stories/tests demo it. Module-path bans still apply.
       files: [
         "src/ui/**/*.{js,mjs,jsx,ts,tsx}",
         "**/*.stories.{js,mjs,jsx,ts,tsx}",
@@ -292,9 +280,6 @@ export default defineConfig({
       },
     },
     {
-      // Desktop test/story files: like every other *.test/*.stories file they
-      // are exempt from the shared-DS Mantine import ban; being desktop they also
-      // keep the Tauri allowance.
       files: [
         "editor/src/desktop/**/*.test.{js,mjs,jsx,ts,tsx}",
         "editor/src/desktop/**/*.stories.{js,mjs,jsx,ts,tsx}",
@@ -309,8 +294,6 @@ export default defineConfig({
       },
     },
     {
-      // A provider stack nests one context per level in dependency order, so its
-      // depth counts providers rather than measuring how hard the tree is to read.
       files: [
         "editor/src/core/components/AppProviders.tsx",
         "editor/src/portal/PortalProviders.tsx",
@@ -321,9 +304,6 @@ export default defineConfig({
       },
     },
     {
-      // Circular-import detection across the editor app source (the import
-      // plugin resolves @app/* and the other tsconfig path aliases). Replaces
-      // the previous dpdm pass.
       files: ["editor/src/**/*.{ts,tsx}"],
       rules: {
         "import/no-cycle": "error",

@@ -3,8 +3,8 @@ import { join, extname } from "path";
 import { fileURLToPath } from "url";
 import { describe, it, expect } from "vitest";
 
-// frontend/ root — this file lives at src/core/env.test.ts
-const frontendRoot = join(fileURLToPath(import.meta.url), "../../..");
+// Root directory — this file lives at src/env.test.ts
+const frontendRoot = join(fileURLToPath(import.meta.url), "../..");
 
 function parseEnvKeys(content: string): Set<string> {
   const keys = new Set<string>();
