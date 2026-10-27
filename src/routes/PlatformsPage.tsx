@@ -207,7 +207,7 @@ export default function PlatformsPage() {
   };
 
   return (
-    <div className="landing-container w-full min-h-screen bg-[#FAF9F6] text-[#1E1E1E] antialiased selection:bg-amber-200 flex flex-col">
+    <div className="landing-container platforms-page w-full h-full overflow-y-auto overflow-x-hidden bg-[#FAF9F6] text-[#1E1E1E] antialiased selection:bg-amber-200 flex flex-col">
       {/* ── Header Navigation (Identical to Home Page) ────────────────────── */}
       <header
         className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between relative z-50"
