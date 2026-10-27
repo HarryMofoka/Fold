@@ -1,24 +1,24 @@
-version: '3'
+version: "3"
 
 tasks:
   install:
     desc: "Install Playwright browsers"
     dir: frontend/editor
-    deps: [ ':frontend:install' ]
+    deps: [":frontend:install"]
     cmds:
       - npx playwright install {{.CLI_ARGS}} --with-deps
 
   stubbed:
     desc: "Run stubbed E2E tests"
     dir: frontend/editor
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     cmds:
       - npx playwright test --project=stubbed {{.CLI_ARGS}}
 
   stubbed-desktop:
     desc: "Run the disk-link E2E suite against a desktop-mode build"
     dir: frontend/editor
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     env:
       PW_DESKTOP: "1"
     cmds:
@@ -27,7 +27,7 @@ tasks:
   stubbed-project:
     desc: "Run the stubbed E2E suite for a single Playwright project"
     dir: frontend/editor
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     vars:
       PROJECT: '{{.PROJECT | default "stubbed"}}'
     cmds:
@@ -51,12 +51,12 @@ tasks:
     internal: true
     ignore_error: true
     vars:
-      BASE_DIR: '{{.ROOT_DIR}}/.test-state/playwright'
+      BASE_DIR: "{{.ROOT_DIR}}/.test-state/playwright"
     # COVERAGE=1 in the calling environment attaches the JaCoCo agent to
     # the bootRun JVM and writes to BASE_DIR/jacoco.exec on shutdown.
     # Off by default to keep local dev runs uninstrumented; CI flips it.
     env:
-      STIRLING_BASE_PATH: '{{.BASE_DIR}}'
+      STIRLING_BASE_PATH: "{{.BASE_DIR}}"
       # Suppress the analytics opt-in modal that fires on first admin login.
       # It renders a Mantine overlay that intercepts pointer events and blocks
       # FirstLoginSlide from rendering, so the bootstrap spec times out waiting
@@ -99,10 +99,10 @@ tasks:
 
   live:runner:
     internal: true
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     dir: frontend/editor
     vars:
-      BASE_DIR: '{{.ROOT_DIR}}/.test-state/playwright'
+      BASE_DIR: "{{.ROOT_DIR}}/.test-state/playwright"
     cmds:
       # Wrapped in `bash -c` because Task's embedded shell (mvdan/sh) only
       # supports `EXIT`/`ERR` in `trap`, not `INT`/`TERM`. CLI_ARGS are
@@ -170,14 +170,14 @@ tasks:
         task e2e:oauth:up
         task e2e:saml:up
     dir: frontend/editor
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     cmds:
       - npx playwright test --project=enterprise {{.CLI_ARGS}}
 
   cross-browser:
     desc: "Run stubbed E2E tests on Chromium, Firefox, and WebKit"
     dir: frontend/editor
-    deps: [ ':frontend:prepare' ]
+    deps: [":frontend:prepare"]
     cmds:
       - npx playwright test --project=stubbed --project=stubbed-firefox --project=stubbed-webkit {{.CLI_ARGS}}
 

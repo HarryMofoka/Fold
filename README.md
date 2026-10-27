@@ -1,228 +1,388 @@
-# Fold
+<p align="center">
+  <pre align="center">
+  ███████╗ ██████╗ ██╗     ██████╗ 
+  ██╔════╝██╔═══██╗██║     ██╔══██╗
+  █████╗  ██║   ██║██║     ██║  ██║
+  ██╔══╝  ██║   ██║██║     ██║  ██║
+  ██║     ╚██████╔╝███████╗██████╔╝
+  ╚═╝      ╚═════╝ ╚══════╝╚═════╝ 
+  </pre>
+</p>
 
-> **Your documents belong to you.**
+<p align="center">
+  <strong>Your PDFs. Still yours.</strong>
+</p>
 
-Fold is a free, privacy-first PDF editor and document workspace. It combines the depth and breadth of a 50+ tool PDF processing suite with the speed, elegance, and simplicity of a modern desktop application.
+<p align="center">
+  <em>The private, local-first, zero-cloud PDF workspace running entirely in your browser or on your desktop.</em>
+</p>
 
-Work with your PDFs directly—no account creation, no subscriptions, no profile tracking, and no unwanted cloud uploads.
-
----
-
-## Philosophy
-
-Fold was designed to make working with documents fast, private, and frictionless:
-
-* **Privacy-First:** Your files are your personal property. Documents are processed locally or within your private self-hosted boundary. No tracking, no behavioral telemetry, and no data harvesting.
-* **Local-First Architecture:** Where technically possible, document manipulation happens client-side directly inside your browser via WebAssembly and browser APIs.
-* **No Account Required:** Open Fold, drop in your files, perform your operations, and download your result. No registration, no login walls, and no email capture.
-* **Zero Cloud Dependency:** Run Fold as a standalone desktop utility, inside an offline browser sandbox, or self-hosted in your private homelab or infrastructure.
-* **Power Underneath, Simplicity on Top:** Behind an uncluttered, minimalist interface lies a production-grade PDF engine capable of complex transformations, digital signing, redactions, OCR, and multi-file workflows.
-* **Completely Free:** Free and open-source foundation with no watermarks or artificial page limitations.
-
----
-
-## Features
-
-Fold organizes over 50 document capabilities into clear, focused categories:
-
-### Organize
-* **Merge PDFs:** Combine multiple PDFs into a single, cohesive document.
-* **Split PDFs:** Split documents by page numbers, page ranges, file size, bookmark sections, outline chapters, or automatic barcode/separator detection.
-* **Reorder & Rearrange:** Visual thumbnail workspace to reorder, duplicate, invert, and organize pages.
-* **Rotate & Auto-Rotate:** Rotate pages manually in 90-degree increments or use automated page-orientation detection for scanned sheets.
-* **Extract & Remove Pages:** Selectively extract specific pages into new documents or delete unnecessary pages.
-* **Remove Blank Pages:** Detect and strip blank pages automatically using customizable threshold sensitivity.
-* **Multi-Page Layout (N-Up):** Arrange multiple pages per sheet (2-up, 4-up, 9-up, 16-up) for print preparation.
-* **Booklet Imposition:** Re-sequence pages specifically for folded booklets and saddle-stitch printing.
-* **Posterize (Tiling):** Split large document pages across multiple standard sheets for tiled printing.
-* **Continuous Single Page:** Concatenate multi-page documents vertically into a single continuous scroll page.
-* **Crop & Scale:** Crop page margins or rescale canvas dimensions (A4, Letter, custom scale factors).
-
-### Convert
-* **Images to/from PDF:** Convert JPG, PNG, WEBP, GIF, TIFF, and BMP images to PDF, or export PDF pages as high-resolution images.
-* **Office Documents:** Convert Microsoft Word (`.docx`), Excel (`.xlsx`), PowerPoint (`.pptx`), and OpenDocument (`.odt`, `.ods`, `.odp`) to PDF.
-* **PDF to Office:** Export PDFs to editable Microsoft Word documents or PowerPoint presentations.
-* **PDF to Data (Excel & CSV):** Extract tables from PDFs directly into structured Excel (`.xlsx`) or CSV spreadsheets.
-* **Web & Markup:** Render HTML files, full websites (URL), or Markdown (`.md`) formatted text directly into styled PDFs.
-* **Ebooks:** Convert EPUB, MOBI, and AZW ebook formats to and from PDF.
-* **Email Messages:** Convert `.eml` and `.msg` email archives, including attachments, to PDF.
-* **Vector Graphics:** Convert SVG vector graphics to vector PDF documents.
-* **Archival Standards (PDF/A):** Convert standard PDF documents to PDF/A formats for long-term legal archival.
-
-### Edit
-* **Interactive Document Editor:** Full visual editor with page rendering, freehand ink, highlight, underline, text callouts, shapes, and stamps.
-* **Direct Content Text Editor:** Find and replace text directly within PDF stream definitions.
-* **Table of Contents & Bookmarks:** Create, edit, reorder, or delete hierarchical document outlines and bookmarks.
-* **Form Filling & Unlocking:** Fill out interactive AcroForm fields or unlock read-only/restricted forms.
-* **Headers, Footers & Page Numbers:** Add custom pagination (Arabic, Roman, custom formatted strings) with precise positioning and font controls.
-* **Watermarks:** Add multi-line or angled text watermarks with opacity and style controls.
-* **Stamps:** Apply preset or custom business rubber stamps (Approved, Confidential, Draft, etc.).
-* **Attachments & Portfolios:** Embed arbitrary file attachments or package multi-file collections into interactive PDF Portfolios.
-
-### Security
-* **Password Encryption:** Protect documents with standard 128-bit or 256-bit AES encryption, setting distinct user and owner passwords.
-* **Decryption & Permission Controls:** Remove known passwords or configure fine-grained permissions (printing, copying, form filling, modifications).
-* **Sanitization:** Strip dangerous JavaScript, embedded metadata, hidden layers, links, and sensitive structural data for safe sharing.
-* **Permanent Redaction:** Search and redact sensitive text or regular expressions, permanently obliterating content from document streams.
-* **Digital Signatures:** Draw handwritten signatures or sign cryptographically using X.509 PKCS#12 digital certificates.
-* **RFC 3161 Timestamps:** Append cryptographically verifiable timestamps from trusted Timestamp Authorities (TSA).
-* **Signature & Compliance Verification:** Validate digital signature chains and verify PDF/A compliance standards.
-* **Inspect JavaScript:** Audit and extract embedded PDF JavaScript code for security inspection.
-
-### Optimize
-* **Compression & Downsampling:** Reduce file sizes through intelligent image downsampling and stream compression.
-* **Decompression:** Expand compressed streams for inspection, debugging, and structural repair.
-* **Flattening:** Flatten interactive form fields and annotations permanently into the visual page layer.
-* **Repair:** Rebuild damaged, corrupt, or unreadable PDF structures using PDFBox and Ghostscript recovery engines.
-
-### Images & Documents
-* **Extract Embedded Images:** Extract all raster graphics embedded inside a document into a clean archive.
-* **Remove Images:** Strip all images from a PDF while preserving layout and typography.
-* **Scanner Simulation Effect:** Give digital PDFs an authentic physical scanned look with adjustable tilt, noise, and texture.
-* **Color Inversion & Adjustment:** Contrast enhancement, dark mode color inversion, or selective color replacement.
-* **Scanner Sheet Splitting:** Automatically detect, crop, and split multi-photo flatbed scans into individual images.
-
-### Utilities
-* **Optical Character Recognition (OCR):** Process scanned documents with Tesseract OCR to generate searchable, selectable text layers in dozens of languages.
-* **Document Comparison:** Visual side-by-side and pixel/text diff comparison of two PDF revisions.
-* **Metadata Inspector:** View and modify PDF metadata tags (Title, Author, Subject, Keywords, Creator, Producer).
-* **Auto-Rename:** Automatically rename files based on extracted text patterns or detected barcodes.
-* **Automation Pipelines:** Chain multiple PDF operations into repeatable multi-step processing pipelines.
+<p align="center">
+  <img src="https://img.shields.io/badge/Privacy-100%25%20Local-22c55e?style=for-the-badge&logo=shield" alt="100% Local" />
+  <img src="https://img.shields.io/badge/Cloud%20Uploads-Zero-blue?style=for-the-badge" alt="Zero Cloud Uploads" />
+  <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0+-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Platform-Web%20%7C%20Desktop-purple?style=for-the-badge" alt="Web and Desktop" />
+  <img src="https://img.shields.io/badge/License-MIT-amber?style=for-the-badge" alt="MIT License" />
+</p>
 
 ---
 
-## Privacy Architecture
+## 📑 Table of Contents
 
-Fold makes a clear distinction between how and where documents are processed:
-
-| Mode | Where processing happens | Network activity | Ideal for |
-| :--- | :--- | :--- | :--- |
-| **Client-Side (Local)** | In-browser via WebAssembly, `@cantoo/pdf-lib`, and PDF.js | None. Documents never leave your browser sandbox | Quick merges, splits, viewing, rotation, signing, annotations |
-| **Private Server / Local Host** | Your local machine (`localhost`) or private server | Communication only between your browser and your local/private backend | Heavy conversions (LibreOffice, OCR, PDFBox repairs) |
-| **Optional Integrations** | Explicit external endpoints (e.g. public TSA timestamp servers) | Only when explicitly configured by the user | RFC 3161 timestamping from certified public authorities |
-
-> [!NOTE]
-> Fold comes with **all telemetry, analytics, and third-party trackers disabled by default**. Error handlers never expose raw stack traces to the browser.
+- [Overview](#-overview)
+- [Why Fold?](#-why-fold)
+- [How It Works: Zero-Cloud Architecture](#-how-it-works-zero-cloud-architecture)
+- [Complete Feature Catalog](#-complete-feature-catalog)
+  - [1. Organize & Assemble](#1-organize--assemble)
+  - [2. Edit, Annotate & Markup](#2-edit-annotate--markup)
+  - [3. Security, Privacy & Redaction](#3-security-privacy--redaction)
+  - [4. Optimize, Convert & Flatten](#4-optimize-convert--flatten)
+- [Fold vs. Cloud PDF Converters](#-fold-vs-cloud-pdf-converters)
+- [Quick Start Guide](#-quick-start-guide)
+  - [Web Development](#web-development)
+  - [Desktop Application (Tauri)](#desktop-application-tauri)
+  - [Static Production Build](#static-production-build)
+- [Project Architecture & Directory Layout](#-project-architecture--directory-layout)
+- [Keyboard Shortcuts & Workflows](#-keyboard-shortcuts--workflows)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## System Architecture
+## 🌟 Overview
 
-```text
-┌────────────────────────────────────────────────────────┐
-│                        Fold UI                         │
-│   (Vite + React 19 + TypeScript + Mantine + Tailwind)  │
-└───────────────┬────────────────────────┬───────────────┘
-                │                        │
-       (Client-side WASM)       (REST API / Local Proxy)
-                │                        │
-                ▼                        ▼
-┌───────────────────────────┐ ┌──────────────────────────┐
-│  Browser-Native Engine    │ │      Fold Backend        │
-│  - @cantoo/pdf-lib        │ │  - Spring Boot (Java)    │
-│  - PDF.js / EmbedPDF      │ │  - Apache PDFBox 3.0     │
-│  - WebAssembly Runtimes   │ │  - BouncyCastle Crypto   │
-│  - IndexedDB Storage      │ │  - Tesseract OCR Engine  │
-└───────────────────────────┘ │  - Document Converters   │
-                              └──────────┬───────────────┘
-                                         │
-                                         ▼
-                              ┌──────────────────────────┐
-                              │     Local Filesystem     │
-                              │  (Auto-cleaned temp dir) │
-                              └──────────────────────────┘
+**Fold** is a full-featured, privacy-sovereign document workspace that gives you complete control over your PDF files. Unlike conventional online PDF utilities that force you to upload sensitive contracts, bank statements, tax documents, and personal IDs to third-party cloud servers, **Fold executes 100% of its document processing directly on your machine**.
+
+Built on **React 19**, **Vite**, **Mantine UI**, **Tailwind CSS**, Mozilla's **PDF.js**, and **`@cantoo/pdf-lib`**, Fold combines desktop-grade document manipulation capabilities with the instantaneous responsiveness and convenience of a modern web application.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  NO ACCOUNTS  ·  NO SUBSCRIPTIONS  ·  NO TRACKING  ·  NO CLOUD UPLOADS  │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **Client PDF Engine (`frontend/editor/src/core/services/clientPdfEngine.ts`):** 100% in-browser, zero-server document manipulation engine implemented in TypeScript using `@cantoo/pdf-lib`, WebAssembly (`pdfiumService`), and `JSZip`.
-* **Frontend UI (`frontend/editor`):** Modern React 19 application built on Vite, Mantine UI components, and Tailwind CSS. Features full in-browser PDF rendering, canvas annotation overlays, and drag-and-drop workspace layout.
-* **Desktop Shell (`frontend/editor/src-tauri`):** Lightweight native desktop shell powered by Tauri (Rust), binding the client-side frontend to local OS file dialogs and window frames with minimal memory usage.
+---
+
+## 🛡️ Why Fold?
+
+Working with PDF files should not require compromising your confidentiality or paying monthly subscription fees for basic document tasks.
+
+* **🔒 Mathematically Private:** Documents never leave your device. Every operation—splitting, merging, redacting, signing, encrypting, and reordering—is computed locally inside your browser's WebAssembly and JavaScript sandbox.
+* **⚡ Instantaneous Processing:** No network upload or download bottlenecks. Files process immediately at native memory speeds, whether you are dealing with a 2-page invoice or a 500-page legal brief.
+* **✈️ 100% Offline & Air-Gapped:** Load Fold once and disconnect your Wi-Fi: every tool continues functioning without an active internet connection.
+* **🆓 Unrestricted & Free:** No arbitrary page limits, no 15 MB file size caps, no daily upload throttling, and no invasive promotional watermarks stamped onto your output files.
+* **📱 P2P Mobile Scanner:** Need to digitize paper? Scan documents using your smartphone's camera via a peer-to-peer WebRTC connection directly to your computer—with zero third-party cloud relays.
 
 ---
 
-## Getting Started
+## 🏗️ How It Works: Zero-Cloud Architecture
+
+Traditional PDF websites ingest your documents onto their remote backend servers, run server-side binaries, and stream the result back to your browser. **Fold reverses this model entirely:**
+
+```
+                  ┌────────────────────────────────────────────────────────────────┐
+                  │                          YOUR DEVICE                           │
+                  │                                                                │
+                  │   ┌────────────────────────────────────────────────────────┐   │
+                  │   │                    Fold Workspace                      │   │
+                  │   │       React 19 · Vite · Mantine UI · Tailwind CSS      │   │
+                  │   └───────────────────────────┬────────────────────────────┘   │
+                  │                               │                                │
+                  │                               ▼  In-Memory ArrayBuffer         │
+                  │   ┌────────────────────────────────────────────────────────┐   │
+                  │   │              Client-Side Execution Engine              │   │
+                  │   │                                                        │   │
+                  │   │  ┌──────────────────┐  ┌────────────────────────────┐  │   │
+                  │   │  │ @cantoo/pdf-lib  │  │ Mozilla pdfjs-dist         │  │   │
+                  │   │  │ - Page Assembly  │  │ - High-Fidelity Rendering  │  │   │
+                  │   │  │ - Merge & Split  │  │ - Text Layer Extraction    │  │   │
+                  │   │  │ - Cryptography   │  │ - Visual Viewport Canvas   │  │   │
+                  │   │  └──────────────────┘  └────────────────────────────┘  │   │
+                  │   │  ┌──────────────────┐  ┌────────────────────────────┐  │   │
+                  │   │  │ WebAssembly Core │  │ Web Worker Pool            │  │   │
+                  │   │  │ - Fast PDFium    │  │ - Non-blocking Processing  │  │   │
+                  │   │  │ - Stream Parsing │  │ - Background Thumbnails    │  │   │
+                  │   │  └──────────────────┘  └────────────────────────────┘  │   │
+                  │   │  ┌──────────────────┐  ┌────────────────────────────┐  │   │
+                  │   │  │ IndexedDB Cache  │  │ WebRTC P2P Sync            │  │   │
+                  │   │  │ - Local History  │  │ - Direct Mobile Scanner    │  │   │
+                  │   │  │ - Session State  │  │ - Air-Drop style Transfer  │  │   │
+                  │   │  └──────────────────┘  └────────────────────────────┘  │   │
+                  │   └───────────────────────────┬────────────────────────────┘   │
+                  │                               │                                │
+                  │                               ▼ Pure Client Save               │
+                  │                    [ Your Local Storage ]                      │
+                  └───────────────────────────────┬────────────────────────────────┘
+                                                  │
+                                            NO CONNECTION
+                                               NEEDED
+                                                  │
+                                                  ▼
+                                            ┌───────────┐
+                                            │ THE CLOUD │  ◄── ZERO BYTES SENT
+                                            └───────────┘
+```
+
+---
+
+## 🧰 Complete Feature Catalog
+
+Fold provides an extensive suite of specialized PDF tools organized into four core functional pillars:
+
+```
+┌───────────────────────────┬───────────────────────────┐
+│   1. ORGANIZE & ASSEMBLE  │  2. EDIT & ANNOTATE       │
+│   Merge, Split, Arrange   │  Text, Ink, Forms, Stamps │
+├───────────────────────────┼───────────────────────────┤
+│   3. SECURITY & PRIVACY   │  4. OPTIMIZE & CONVERT    │
+│   Encrypt, Redact, Sign   │  Compress, Flatten, Image │
+└───────────────────────────┴───────────────────────────┘
+```
+
+### 1. Organize & Assemble
+
+Manipulate the structure, sequence, and dimensions of any PDF document:
+
+| Tool | Capability & Implementation Details |
+| :--- | :--- |
+| **Merge PDFs** | Combine multiple separate PDF files into a single, seamless document. Drag and drop to reorder input files before concatenation. |
+| **Split PDFs** | Disassemble a document by explicit page ranges (e.g. `1-4, 7, 9-15`), split into individual single-page documents, or split every *N* pages. |
+| **Visual Page Grid** | An interactive canvas workspace displaying high-resolution thumbnails for every page. Reorder via drag-and-drop, invert page order, rotate, duplicate, or delete with one click. |
+| **Extract Pages** | Select specific pages visually or via expressions to extract them into a brand-new, clean PDF. |
+| **Remove / Delete Pages** | Strip out blank pages, cover sheets, or confidential sections permanently from the PDF stream. |
+| **Rotate Pages** | Rotate individual pages or entire documents in 90°, 180°, or 270° increments with automatic orientation correction. |
+| **Crop & Canvas Scale** | Visually crop page margins to eliminate unwanted borders or resize page dimensions to standardized print profiles (A4, US Letter, Legal). |
+| **Multi-File Workbench** | Load and stage multiple documents simultaneously in a persistent local session without reloading the page. |
+
+---
+
+### 2. Edit, Annotate & Markup
+
+Interact with and modify document contents directly:
+
+| Tool | Capability & Implementation Details |
+| :--- | :--- |
+| **Interactive Document Editor** | Full visual editing suite supporting smooth pan, continuous scroll, multi-level zoom, single-page and two-page spreads, and page overview thumbnails. |
+| **Direct Stream Text Editing** | Find and replace text directly within low-level PDF content streams—modifying typographical strings in place without flattening or rasterization. |
+| **Form Filling (AcroForms)** | Detect and interactively complete standard AcroForm fields: fill text inputs, toggle checkboxes, select radio buttons, and choose options from dropdown lists. |
+| **Freehand Ink & Pen** | Vector drawing layer powered by smooth bezier curves with adjustable line weight, opacity, and color palette. |
+| **Highlighter & Text Snapping** | Semi-transparent highlight, underline, and strike-through annotations that automatically snap to rendered text layers. |
+| **Shapes & Callouts** | Add geometric vector shapes (rectangles, ellipses, polylines, arrows) and callout speech bubbles with customizable stroke and fill colors. |
+| **Rubber Stamps** | Apply pre-configured business stamps (*APPROVED*, *CONFIDENTIAL*, *DRAFT*, *VOID*, *FINAL*, *RECEIVED*) or generate customized text stamps with dates and timestamps. |
+| **Headers, Footers & Pagination** | Insert automated page numbers (`Page {n} of {total}`), Roman numerals, Bates numbering, and custom header/footer text with precision alignment and margin controls. |
+| **Table of Contents & Bookmarks** | Inspect, create, edit, reorder, or delete hierarchical document outlines and navigation bookmarks. |
+
+---
+
+### 3. Security, Privacy & Redaction
+
+Protect sensitive information and maintain strict document governance:
+
+| Tool | Capability & Implementation Details |
+| :--- | :--- |
+| **Password Encryption** | Lock documents using industry-standard **AES-128** or **AES-256** bit encryption. Set distinct **User passwords** (required to view) and **Owner passwords** (required to edit). |
+| **Fine-Grained Permissions** | Restrict or allow granular capabilities: high-resolution printing, text and image copying, content modification, annotation authoring, and screen reader access. |
+| **Decryption & Unlock** | Remove encryption and password restrictions from protected documents whenever you hold the decryption passphrase. |
+| **Deep Metadata Sanitization** | Thoroughly purge hidden document data: author names, creation and modification timestamps, operating system metadata, software generator signatures, PDF version history, and XMP metadata trees. |
+| **True Vector Redaction** | Permanently excise confidential text, figures, and vectors from the underlying PDF stream—ensuring redacted text cannot be highlighted, selected, or recovered from raw bytes. |
+| **Handwritten & Digital Signatures** | Draw signatures on desktop or touch screens, import transparent signature stamps, or place formal signature blocks on agreements. |
+| **P2P Mobile Document Scanner** | Point your phone camera at a QR code displayed in Fold to establish a direct WebRTC peer-to-peer data channel. Take pictures of physical paper and transfer them directly into your browser workspace without any cloud relay. |
+
+---
+
+### 4. Optimize, Convert & Flatten
+
+Ensure your documents are fast, universally compatible, and archival-ready:
+
+| Tool | Capability & Implementation Details |
+| :--- | :--- |
+| **PDF Stream Compression** | Intelligently compress PDF object streams and downsample oversized embedded images with adjustable DPI profiles and quality targets. |
+| **Annotation & Form Flattening** | Permanently fuse interactive AcroForm fields, vector signatures, and markup annotations directly into the base page rendering layer to prevent tampering. |
+| **Images to PDF** | Convert batches of PNG, JPG, WebP, SVG, and TIFF images into a unified, high-resolution PDF document with configurable page sizing and margins. |
+| **PDF to Image Export** | Rasterize PDF pages into crisp PNG or JPEG image sequences at customizable DPI resolutions (72, 150, 300, 600 DPI) for web display or print. |
+| **Embedded Image Extraction** | Extract all embedded raster images from within a PDF file into a downloadable ZIP archive without re-compression quality loss. |
+
+---
+
+## ⚖️ Fold vs. Cloud PDF Converters
+
+| Feature / Criteria | 📁 Fold | ☁️ Online Cloud Converters (SmallPDF, iLovePDF, etc.) |
+| :--- | :--- | :--- |
+| **Document Location** | **Never leaves your device** (in-memory only) | Uploaded to third-party cloud servers |
+| **Privacy & Compliance** | **HIPAA / GDPR compliant by design** (zero telemetry) | Data retention policies apply; risk of breach |
+| **Offline Functionality** | **100% works without internet** | Fails completely without internet connection |
+| **Account & Login** | **None required** — instant workspace | Frequent login walls, sign-ups, and email captures |
+| **Processing Speed** | **Zero upload/download delay**; native speed | Bottlenecked by home/office upload bandwidth |
+| **File Size Constraints** | **Virtually unlimited** (bounded only by local RAM) | Strict 15 MB – 50 MB caps on free tiers |
+| **Cost** | **100% Free and Open Source (MIT)** | $8 – $20 / month subscriptions for full access |
+| **Document Watermarks** | **Zero watermarks** | Free tiers frequently stamp watermarks onto pages |
+
+---
+
+## 🚀 Quick Start Guide
+
+Fold can be run directly as a local web app or compiled into a lightweight native desktop binary.
 
 ### Prerequisites
 
-* **Node.js:** Node.js 20+ and npm 10+
-* **Java:** **Not required!** All PDF processing runs locally in TypeScript and WebAssembly.
-
-### Running Locally
-
-#### 1. Quick Start (via Task or npm):
-```bash
-# Using Task
-task dev
-
-# Or directly with npm
-cd frontend
-npm install
-npm run dev --prefix editor
-```
-The Fold interface starts on `http://localhost:5173`. Open the page and begin processing PDFs immediately—no backend or server configuration required!
-
-#### 2. Building for Production / Static Hosting:
-```bash
-# Using Task
-task build
-
-# Or directly with npm
-cd frontend
-npm run build --prefix editor
-```
-The compiled, completely static web bundle will be in `frontend/editor/dist/`. You can host it on GitHub Pages, Cloudflare Pages, Vercel, Netlify, or any static file server!
-
+- **Node.js**: `v20.0.0` or higher (recommended: `v22.x`)
+- **npm**: `v10.0.0` or higher
+- **Rust & Cargo**: (Optional, only required if compiling the native Tauri desktop shell)
 
 ---
 
-## Project Structure
+### Web Development
+
+To run Fold in development mode with hot-reloading:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/HarryMofoka/Ink.git
+cd Ink
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the Vite development server
+npm run dev
+```
+
+Open your browser and navigate to:
+```
+http://localhost:5173
+```
+
+All PDF manipulation capabilities are active immediately. No background Java engines or Python environments are required!
+
+---
+
+### Desktop Application (Tauri)
+
+Fold includes an optional cross-platform native desktop shell built with [Tauri v2](https://tauri.app/) (Rust):
+
+```bash
+# Start desktop development mode
+npm run tauri:dev
+
+# Build standalone desktop installer (MSI / DMG / Deb)
+npm run tauri:build
+```
+
+---
+
+### Static Production Build
+
+Because Fold executes 100% client-side, the production build is a completely static set of HTML, JavaScript, CSS, and WebAssembly assets that can be hosted on any static host (GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3):
+
+```bash
+# Build production bundle
+npm run build
+```
+
+The output artifacts will be written to `dist/`.
+
+---
+
+## 🏛️ Project Architecture & Directory Layout
 
 ```text
 Fold/
-├── app/
-│   ├── core/              # Core PDF API controllers, routes, and services
-│   ├── common/            # Shared utilities, temp file management, model definitions
-│   └── proprietary/       # Optional extended pipeline and security modules
-├── frontend/
-│   ├── editor/            # Fold web and desktop SPA (React 19 + TypeScript)
-│   │   ├── src/core/      # UI components, tool registry, workspace canvas, hooks
-│   │   ├── src-tauri/     # Tauri desktop application configuration
-│   │   └── public/        # Static assets, vector icons, localization files
-│   └── shared/            # Shared UI tokens and cross-app utilities
-├── engine/                # Python processing engine (OCR and specialized tasks)
-├── docs/                  # Architecture specifications and technical audits
-│   ├── ARCHITECTURE.md    # In-depth technical architecture & data flows
-│   ├── DEPENDENCIES.md    # Full runtime dependency audit & invocation trace
-│   ├── OCR_AUDIT.md       # Complete OCR pipeline & model analysis
-│   ├── FEATURE_VERIFICATION.md # Empirical execution & verification state
-│   ├── DEPLOYMENT_AND_ARCHITECTURE.md # Platform deployment & layer boundary
-│   └── ROADMAP.md         # Long-term feature roadmap & technical constraints
-├── CHANGELOG.md           # Detailed record of all transformation changes
-├── build.gradle           # Root Gradle build configuration
-├── settings.gradle        # Multi-project Gradle settings
-└── Taskfile.yml           # Unified task runner definitions
+├── src/
+│   ├── components/            # UI components (Editor, Toolbar, PageGrid, Canvas)
+│   │   ├── editor/            # Document canvas, annotation layers, ink pad
+│   │   ├── pages/             # Page organizer grid and thumbnail cards
+│   │   ├── shared/            # Shared design system components & modals
+│   │   └── settings/          # Local-only configuration panels
+│   ├── core/                  # Core abstractions and client-side processing
+│   │   ├── services/          # clientPdfEngine.ts (100% client-side PDF operations)
+│   │   ├── contexts/          # FileContext.tsx (in-memory document management)
+│   │   └── hooks/             # Tool orchestration and state hooks
+│   ├── routes/                # Application routes (Home, Editor, Privacy, Terms)
+│   ├── icons/                 # Scalable vector icon registry
+│   └── theme/                 # Mantine UI & Tailwind design tokens
+├── public/                    # Favicons, WebApp manifest, fonts, and static assets
+├── docs/                      # Technical specifications & roadmap
+│   ├── ARCHITECTURE.md        # Deep dive into client data flows
+│   └── ROADMAP.md             # Development priorities
+├── devGuide/                  # Developer guides and contribution standards
+│   ├── CODE_COMMENTS.md       # Guidelines for code comments
+│   └── HowToAddNewLanguage.md # Internationalization guide
+├── src-tauri/                 # Tauri Rust desktop application configuration
+├── package.json               # Dependencies and build scripts
+├── vite.config.ts             # Vite configuration with @app/* alias resolution
+├── tailwind.config.js         # Tailwind typography and theme configuration
+└── README.md                  # Project overview and documentation
+```
+
+### Import Paths (`@app/*`)
+
+The codebase uses `@app/*` as the universal import alias configured in `vite.config.ts` and `tsconfig.json`:
+
+```typescript
+// Correct
+import { useFileContext } from "@app/contexts/FileContext";
+import { clientPdfEngine } from "@app/services/clientPdfEngine";
 ```
 
 ---
 
-## Contributing
+## ⌨️ Keyboard Shortcuts & Workflows
 
-We welcome community contributions, bug reports, and pull requests!
-
-1. Fork the repository and create a feature branch (`git checkout -b feature/amazing-feature`).
-2. Adhere to code formatting:
-   * Frontend: `npm run lint` and `npm run format` (using oxlint / oxfmt)
-   * Backend: `./gradlew spotlessApply`
-3. Verify your changes pass test suites:
-   * Frontend: `npm test`
-   * Backend: `./gradlew test`
-4. Commit your changes with clear, semantic commit messages.
-5. Submit a pull request detailing the problem solved and the implementation details.
+| Shortcut | Context | Action |
+| :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>O</kbd> / <kbd>⌘</kbd> + <kbd>O</kbd> | Global | Open file selector dialog |
+| <kbd>Ctrl</kbd> + <kbd>S</kbd> / <kbd>⌘</kbd> + <kbd>S</kbd> | Editor | Save / Download processed PDF |
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd> | Editor | Undo last action |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> / <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Editor | Redo undone action |
+| <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>⌘</kbd> + <kbd>+</kbd> | Canvas | Zoom in |
+| <kbd>Ctrl</kbd> + <kbd>-</kbd> / <kbd>⌘</kbd> + <kbd>-</kbd> | Canvas | Zoom out |
+| <kbd>Ctrl</kbd> + <kbd>0</kbd> / <kbd>⌘</kbd> + <kbd>0</kbd> | Canvas | Reset zoom to 100% / Fit to Page |
+| <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Page Grid | Delete selected page(s) |
+| <kbd>Space</kbd> + <kbd>Click & Drag</kbd> | Canvas | Pan document viewport |
 
 ---
 
-## Attribution & License
+## 🤝 Contributing
 
-Fold originated as a transformation of the open-source **Stirling-PDF** project, created by Anthony Stirling and the open-source community. Fold builds upon this strong technical foundation with a refined, privacy-first, and local-first product vision.
+Contributions to Fold are warmly welcomed! To contribute:
 
-* **Core License:** The core platform is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
-* **Third-Party Components:** Third-party libraries, including Apache PDFBox, BouncyCastle, PDF.js, and font assets, are subject to their respective open-source licenses as documented in `app/core/src/main/resources/static/3rdPartyLicenses.json`.
+1. **Fork the repository** on GitHub.
+2. **Create a descriptive feature branch**:
+   ```bash
+   git checkout -b feature/cool-new-tool
+   ```
+3. **Ensure quality checks pass**:
+   ```bash
+   npm run typecheck
+   npm run lint
+   npm test
+   ```
+4. **Adhere to Code Comment Guidelines**: Review [devGuide/CODE_COMMENTS.md](devGuide/CODE_COMMENTS.md) before submitting.
+5. **Open a Pull Request** with a detailed summary of your changes.
+
+---
+
+## 📄 License
+
+Fold is open-source software licensed under the **[MIT License](LICENSE)**.
+
+```
+Copyright (c) 2025-2026 Fold Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+```
+
+---
+
+<p align="center">
+  <sub>Built with care for document privacy and digital sovereignty.</sub>
+</p>

@@ -31,7 +31,9 @@ function extractKeysFromToml(content) {
 
     const kvMatch = trimmed.match(/^([a-zA-Z0-9_\-\.]+)\s*=/);
     if (kvMatch) {
-      const keyName = currentSection ? `${currentSection}.${kvMatch[1]}` : kvMatch[1];
+      const keyName = currentSection
+        ? `${currentSection}.${kvMatch[1]}`
+        : kvMatch[1];
       keys.add(keyName);
     }
   }
@@ -55,7 +57,9 @@ function countTranslations(targetLocale = null, showPercentageOnly = false) {
   }
 
   const locales = fs.readdirSync(LOCALES_DIR).filter((dir) => {
-    return fs.statSync(path.join(LOCALES_DIR, dir)).isDirectory() && dir !== "en-US";
+    return (
+      fs.statSync(path.join(LOCALES_DIR, dir)).isDirectory() && dir !== "en-US"
+    );
   });
 
   const results = [];
@@ -69,7 +73,10 @@ function countTranslations(targetLocale = null, showPercentageOnly = false) {
       const content = fs.readFileSync(localeFile, "utf-8");
       const keys = extractKeysFromToml(content);
       const translatedCount = keys.size;
-      const percentage = Math.min(100, Math.round((translatedCount / totalKeys) * 100));
+      const percentage = Math.min(
+        100,
+        Math.round((translatedCount / totalKeys) * 100),
+      );
 
       results.push({ locale, percentage, translatedCount, totalKeys });
 
@@ -85,17 +92,25 @@ function countTranslations(targetLocale = null, showPercentageOnly = false) {
   if (targetLocale) {
     const res = results[0];
     if (res) {
-      console.log(`Locale: ${res.locale} — ${res.percentage}% (${res.translatedCount}/${res.totalKeys} keys)`);
+      console.log(
+        `Locale: ${res.locale} — ${res.percentage}% (${res.translatedCount}/${res.totalKeys} keys)`,
+      );
     } else {
       console.error(`Locale ${targetLocale} not found.`);
     }
     return;
   }
 
-  console.log(`Translation Completeness (Reference: en-US with ${totalKeys} keys):`);
-  console.log("-----------------------------------------------------------------");
+  console.log(
+    `Translation Completeness (Reference: en-US with ${totalKeys} keys):`,
+  );
+  console.log(
+    "-----------------------------------------------------------------",
+  );
   for (const res of results.sort((a, b) => b.percentage - a.percentage)) {
-    console.log(`${res.locale.padEnd(10)}: ${String(res.percentage).padStart(3)}% (${res.translatedCount}/${res.totalKeys})`);
+    console.log(
+      `${res.locale.padEnd(10)}: ${String(res.percentage).padStart(3)}% (${res.translatedCount}/${res.totalKeys})`,
+    );
   }
 }
 

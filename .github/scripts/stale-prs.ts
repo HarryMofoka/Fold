@@ -107,13 +107,33 @@ export interface Actor {
 }
 
 export type TimelineEvent =
-  | { __typename: "LabeledEvent" | "UnlabeledEvent"; createdAt: string; label: { name: string }; actor: Actor | null }
-  | { __typename: "ReopenedEvent" | "ReadyForReviewEvent" | "ConvertToDraftEvent"; createdAt: string; actor: Actor | null };
+  | {
+      __typename: "LabeledEvent" | "UnlabeledEvent";
+      createdAt: string;
+      label: { name: string };
+      actor: Actor | null;
+    }
+  | {
+      __typename:
+        | "ReopenedEvent"
+        | "ReadyForReviewEvent"
+        | "ConvertToDraftEvent";
+      createdAt: string;
+      actor: Actor | null;
+    };
 
 export type ActivityItem =
   | { __typename: "IssueComment"; createdAt: string; author: Actor | null }
-  | { __typename: "PullRequestReview"; submittedAt: string | null; author: Actor | null }
-  | { __typename: "HeadRefForcePushedEvent"; createdAt: string; actor: Actor | null };
+  | {
+      __typename: "PullRequestReview";
+      submittedAt: string | null;
+      author: Actor | null;
+    }
+  | {
+      __typename: "HeadRefForcePushedEvent";
+      createdAt: string;
+      actor: Actor | null;
+    };
 
 interface TimelinePage {
   pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
@@ -161,15 +181,28 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const hasLabel = (pr: PullRequest, name: string) => pr.labels.includes(name);
 const byPerson = (actor: Actor | null) => actor?.__typename !== "Bot";
-const byTriageBot = (actor: Actor | null) => actor?.__typename === "Bot" && actor.login === BOT_LOGIN;
+const byTriageBot = (actor: Actor | null) =>
+  actor?.__typename === "Bot" && actor.login === BOT_LOGIN;
 
-function lastEvent(pr: PullRequest, matches: (event: TimelineEvent) => boolean) {
+function lastEvent(
+  pr: PullRequest,
+  matches: (event: TimelineEvent) => boolean,
+) {
   return pr.timeline
     .filter(matches)
-    .reduce<TimelineEvent | null>((last, event) => (last === null || time(event.createdAt) >= time(last.createdAt) ? event : last), null);
+    .reduce<TimelineEvent | null>(
+      (last, event) =>
+        last === null || time(event.createdAt) >= time(last.createdAt)
+          ? event
+          : last,
+      null,
+    );
 }
 
-function latestEvent(pr: PullRequest, matches: (event: TimelineEvent) => boolean) {
+function latestEvent(
+  pr: PullRequest,
+  matches: (event: TimelineEvent) => boolean,
+) {
   const event = lastEvent(pr, matches);
   return event === null ? null : time(event.createdAt);
 }
@@ -182,19 +215,24 @@ const unlabelled = (name: string) => (event: TimelineEvent) =>
 
 const reopened = (event: TimelineEvent) => event.__typename === "ReopenedEvent";
 
-const becameReady = (event: TimelineEvent) => reopened(event) || event.__typename === "ReadyForReviewEvent";
+const becameReady = (event: TimelineEvent) =>
+  reopened(event) || event.__typename === "ReadyForReviewEvent";
 
-const changedState = (event: TimelineEvent) => becameReady(event) || event.__typename === "ConvertToDraftEvent";
+const changedState = (event: TimelineEvent) =>
+  becameReady(event) || event.__typename === "ConvertToDraftEvent";
 
 // What ends a warning on a ready PR: a turn label removed, a reopen, or a switch to draft and back.
 const endsWarning = (event: TimelineEvent) =>
-  changedState(event) || TURN_LABELS.some(({ label }) => unlabelled(label)(event));
+  changedState(event) ||
+  TURN_LABELS.some(({ label }) => unlabelled(label)(event));
 
 /** When the triage's warning was posted; null without Stale PR, or when someone else added it. */
 function warningTime(pr: PullRequest) {
   if (!hasLabel(pr, LABELS.stale)) return null;
   const added = lastEvent(pr, labelled(LABELS.stale));
-  return added !== null && byTriageBot(added.actor) ? time(added.createdAt) : null;
+  return added !== null && byTriageBot(added.actor)
+    ? time(added.createdAt)
+    : null;
 }
 
 // Removing a warning, by hand or by a clear, restarts the clock; dropping a Stale PR
@@ -202,7 +240,9 @@ function warningTime(pr: PullRequest) {
 function lastWarningEndedAt(pr: PullRequest) {
   let warning = false;
   let endedAt: number | null = null;
-  for (const event of [...pr.timeline].sort((a, b) => time(a.createdAt) - time(b.createdAt))) {
+  for (const event of [...pr.timeline].sort(
+    (a, b) => time(a.createdAt) - time(b.createdAt),
+  )) {
     if (labelled(LABELS.stale)(event)) {
       warning = byTriageBot(event.actor);
     } else if (unlabelled(LABELS.stale)(event)) {
@@ -217,26 +257,49 @@ function lastWarningEndedAt(pr: PullRequest) {
 // label added since the warning, and not reopened since, stopped partway.
 function closeInterrupted(pr: PullRequest, warnedAt: number) {
   const closingAt = latestEvent(pr, labelled(LABELS.backlogCleanup));
-  return hasLabel(pr, LABELS.backlogCleanup) && closingAt !== null && closingAt >= warnedAt && (latestEvent(pr, reopened) ?? 0) < closingAt;
+  return (
+    hasLabel(pr, LABELS.backlogCleanup) &&
+    closingAt !== null &&
+    closingAt >= warnedAt &&
+    (latestEvent(pr, reopened) ?? 0) < closingAt
+  );
 }
 
 const NONE: Decision = { action: "none", reasons: [] };
 const CLEAR: Decision = { action: "clear", reasons: [] };
 
-const closeOrPending = (now: number, warnedAt: number, reasons: Reason[]): Decision => ({
-  action: now - warnedAt >= CLOSE_AFTER_WARNING_DAYS * DAY_MS ? "close" : "pending",
+const closeOrPending = (
+  now: number,
+  warnedAt: number,
+  reasons: Reason[],
+): Decision => ({
+  action:
+    now - warnedAt >= CLOSE_AFTER_WARNING_DAYS * DAY_MS ? "close" : "pending",
   reasons,
 });
 
-function decideReady(pr: PullRequest, now: number, warnedAt: number | null): Decision {
+function decideReady(
+  pr: PullRequest,
+  now: number,
+  warnedAt: number | null,
+): Decision {
   // A turn only counts while the PR is open and ready.
   const readyAt = latestEvent(pr, becameReady) ?? 0;
   const restartedAt = lastWarningEndedAt(pr) ?? 0;
-  const turns = TURN_LABELS.filter(({ label }) => hasLabel(pr, label)).map(({ label, reason }) => ({
-    reason,
-    since: Math.max(latestEvent(pr, labelled(label)) ?? now, readyAt, restartedAt),
-  }));
-  const dueAt = (at: number) => turns.filter((turn) => at - turn.since >= TURN_DAYS * DAY_MS).map((turn) => turn.reason);
+  const turns = TURN_LABELS.filter(({ label }) => hasLabel(pr, label)).map(
+    ({ label, reason }) => ({
+      reason,
+      since: Math.max(
+        latestEvent(pr, labelled(label)) ?? now,
+        readyAt,
+        restartedAt,
+      ),
+    }),
+  );
+  const dueAt = (at: number) =>
+    turns
+      .filter((turn) => at - turn.since >= TURN_DAYS * DAY_MS)
+      .map((turn) => turn.reason);
 
   if (warnedAt === null) {
     const due = dueAt(now);
@@ -246,14 +309,21 @@ function decideReady(pr: PullRequest, now: number, warnedAt: number | null): Dec
   // Only what was due when it warned: a turn that started later was not in the warning.
   const warned = dueAt(warnedAt);
   const endedAt = latestEvent(pr, endsWarning);
-  if (warned.length === 0 || (endedAt !== null && endedAt > warnedAt)) return CLEAR;
+  if (warned.length === 0 || (endedAt !== null && endedAt > warnedAt))
+    return CLEAR;
   return closeOrPending(now, warnedAt, warned);
 }
 
-function decideDraft(pr: PullRequest, now: number, warnedAt: number | null): Decision {
+function decideDraft(
+  pr: PullRequest,
+  now: number,
+  warnedAt: number | null,
+): Decision {
   const activeAt = time(pr.lastActivityAt);
   if (warnedAt === null) {
-    return now - activeAt >= IDLE_DRAFT_DAYS * DAY_MS ? { action: "warn", reasons: ["idleDraft"] } : NONE;
+    return now - activeAt >= IDLE_DRAFT_DAYS * DAY_MS
+      ? { action: "warn", reasons: ["idleDraft"] }
+      : NONE;
   }
   const changedAt = latestEvent(pr, changedState) ?? 0;
   if (Math.max(activeAt, changedAt) > warnedAt) return CLEAR;
@@ -273,13 +343,19 @@ function decideDraft(pr: PullRequest, now: number, warnedAt: number | null): Dec
  */
 export function decide(pr: PullRequest, now: number): Decision {
   const stale = hasLabel(pr, LABELS.stale);
-  if (pr.author?.__typename === "Bot" || hasLabel(pr, LABELS.onHold)) return stale ? CLEAR : NONE;
+  if (pr.author?.__typename === "Bot" || hasLabel(pr, LABELS.onHold))
+    return stale ? CLEAR : NONE;
   const warnedAt = warningTime(pr);
-  if (warnedAt !== null && closeInterrupted(pr, warnedAt)) return { action: "resume", reasons: [] };
-  const decision = pr.isDraft ? decideDraft(pr, now, warnedAt) : decideReady(pr, now, warnedAt);
+  if (warnedAt !== null && closeInterrupted(pr, warnedAt))
+    return { action: "resume", reasons: [] };
+  const decision = pr.isDraft
+    ? decideDraft(pr, now, warnedAt)
+    : decideReady(pr, now, warnedAt);
   // A Stale PR label someone else added warned nobody: replace it with a warning when one
   // is due, and drop it otherwise.
-  return stale && warnedAt === null && decision.action === "none" ? CLEAR : decision;
+  return stale && warnedAt === null && decision.action === "none"
+    ? CLEAR
+    : decision;
 }
 
 function problem(reason: Reason, pr: PullRequest, now: number): string {
@@ -306,18 +382,28 @@ function remedy(reason: Reason, pr: PullRequest): string {
 
 const authorLogin = (pr: PullRequest) => pr.author?.login ?? "ghost";
 
-export function warningComment(pr: PullRequest, reasons: Reason[], now: number) {
+export function warningComment(
+  pr: PullRequest,
+  reasons: Reason[],
+  now: number,
+) {
   return [
     `Hi @${authorLogin(pr)}, this PR has been marked as being stale because:`,
     "",
-    ...reasons.map((reason) => `- ${problem(reason, pr, now)} ${remedy(reason, pr)}`),
+    ...reasons.map(
+      (reason) => `- ${problem(reason, pr, now)} ${remedy(reason, pr)}`,
+    ),
     "",
     `If this is still outstanding in ${CLOSE_AFTER_WARNING_DAYS} days, the PR will be closed automatically.`,
     "If you think it's actually waiting on us rather than you, just add a comment so a maintainer can take a look.",
   ].join("\n");
 }
 
-export function closingComment(pr: PullRequest, reasons: Reason[], now: number) {
+export function closingComment(
+  pr: PullRequest,
+  reasons: Reason[],
+  now: number,
+) {
   return [
     `Hi @${authorLogin(pr)}, this PR has been closed automatically because the following issues haven't been resolved within ${CLOSE_AFTER_WARNING_DAYS} days of the reminder:`,
     "",
@@ -344,14 +430,21 @@ function activityTime(item: ActivityItem) {
  * so a push counts from its newest commit's date: commits made long before they were
  * pushed look old.
  */
-export function latestActivity(node: PullRequestNode, timeline: TimelineEvent[]) {
+export function latestActivity(
+  node: PullRequestNode,
+  timeline: TimelineEvent[],
+) {
   const times = [
     node.createdAt,
     ...node.commits.nodes.map((pullCommit) => pullCommit.commit.committedDate),
     ...node.activity.nodes.map(activityTime),
-    ...timeline.filter((event) => byPerson(event.actor)).map((event) => event.createdAt),
+    ...timeline
+      .filter((event) => byPerson(event.actor))
+      .map((event) => event.createdAt),
   ];
-  return new Date(Math.max(...times.flatMap((iso) => (iso === null ? [] : [time(iso)])))).toISOString();
+  return new Date(
+    Math.max(...times.flatMap((iso) => (iso === null ? [] : [time(iso)]))),
+  ).toISOString();
 }
 
 async function fetchOpenPullNumbers(github: GitHubClient, repo: Repo) {
@@ -360,7 +453,10 @@ async function fetchOpenPullNumbers(github: GitHubClient, repo: Repo) {
   do {
     const page: {
       repository: {
-        pullRequests: { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: { number: number }[] };
+        pullRequests: {
+          pageInfo: { hasNextPage: boolean; endCursor: string | null };
+          nodes: { number: number }[];
+        };
       };
     } = await github.graphql(OPEN_PULL_NUMBERS_QUERY, { ...repo, cursor });
     const { nodes, pageInfo } = page.repository.pullRequests;
@@ -371,8 +467,14 @@ async function fetchOpenPullNumbers(github: GitHubClient, repo: Repo) {
 }
 
 /** The PR with its whole timeline; null once it is closed or merged. */
-async function fetchPullRequest(github: GitHubClient, repo: Repo, number: number): Promise<PullRequest | null> {
-  const page = await github.graphql<{ repository: { pullRequest: PullRequestNode | null } }>(PULL_REQUEST_QUERY, {
+async function fetchPullRequest(
+  github: GitHubClient,
+  repo: Repo,
+  number: number,
+): Promise<PullRequest | null> {
+  const page = await github.graphql<{
+    repository: { pullRequest: PullRequestNode | null };
+  }>(PULL_REQUEST_QUERY, {
     ...repo,
     number,
   });
@@ -381,10 +483,9 @@ async function fetchPullRequest(github: GitHubClient, repo: Repo, number: number
   const timeline = [...node.timelineItems.nodes];
   let { pageInfo } = node.timelineItems;
   while (pageInfo.hasPreviousPage) {
-    const older = await github.graphql<{ repository: { pullRequest: { timelineItems: TimelinePage } | null } }>(
-      OLDER_TIMELINE_QUERY,
-      { ...repo, number, before: pageInfo.startCursor },
-    );
+    const older = await github.graphql<{
+      repository: { pullRequest: { timelineItems: TimelinePage } | null };
+    }>(OLDER_TIMELINE_QUERY, { ...repo, number, before: pageInfo.startCursor });
     const items = older.repository.pullRequest?.timelineItems;
     if (!items) break;
     timeline.unshift(...items.nodes);
@@ -403,12 +504,21 @@ async function fetchPullRequest(github: GitHubClient, repo: Repo, number: number
 }
 
 // Must match hasConflicts in pr-conflict-labeler.yml, the owner of the label this confirms.
-const conflicting = (pull: PullData) => pull.mergeable === false && pull.mergeable_state === "dirty";
+const conflicting = (pull: PullData) =>
+  pull.mergeable === false && pull.mergeable_state === "dirty";
 
-async function confirmedConflicting(github: GitHubClient, repo: Repo, number: number, retryMs: number) {
+async function confirmedConflicting(
+  github: GitHubClient,
+  repo: Repo,
+  number: number,
+  retryMs: number,
+) {
   for (let attempt = 1; attempt <= MERGEABILITY_ATTEMPTS; attempt += 1) {
     if (attempt > 1) await sleep(retryMs);
-    const { data } = await github.rest.pulls.get({ ...repo, pull_number: number });
+    const { data } = await github.rest.pulls.get({
+      ...repo,
+      pull_number: number,
+    });
     if (data.mergeable !== null) return conflicting(data);
   }
   return false;
@@ -425,10 +535,13 @@ async function confirmConflicts(
 ): Promise<Decision> {
   const acts = decision.action === "warn" || decision.action === "close";
   if (!acts || !decision.reasons.includes("conflicts")) return decision;
-  if (await confirmedConflicting(github, repo, pr.number, retryMs)) return decision;
+  if (await confirmedConflicting(github, repo, pr.number, retryMs))
+    return decision;
   const reasons = decision.reasons.filter((reason) => reason !== "conflicts");
   if (reasons.length > 0) return { ...decision, reasons };
-  return decision.action === "close" ? { action: "pending", reasons: decision.reasons } : NONE;
+  return decision.action === "close"
+    ? { action: "pending", reasons: decision.reasons }
+    : NONE;
 }
 
 // Applies a label removal to the PR as read, so the decision sees it even in a dry run.
@@ -439,7 +552,11 @@ function withoutLabel(pr: PullRequest, name: string, now: number): PullRequest {
     label: { name },
     actor: { login: BOT_LOGIN, __typename: "Bot" },
   };
-  return { ...pr, labels: pr.labels.filter((label) => label !== name), timeline: [...pr.timeline, removed] };
+  return {
+    ...pr,
+    labels: pr.labels.filter((label) => label !== name),
+    timeline: [...pr.timeline, removed],
+  };
 }
 
 async function paced(intervalMs: number, writes: (() => Promise<unknown>)[]) {
@@ -460,20 +577,36 @@ async function apply(
   intervalMs: number,
 ) {
   const { issues, pulls } = github.rest;
-  const close = () => pulls.update({ owner: issue.owner, repo: issue.repo, pull_number: pr.number, state: "closed" });
+  const close = () =>
+    pulls.update({
+      owner: issue.owner,
+      repo: issue.repo,
+      pull_number: pr.number,
+      state: "closed",
+    });
   switch (decision.action) {
     case "warn":
       await paced(intervalMs, [
-        () => issues.createComment({ ...issue, body: warningComment(pr, decision.reasons, now) }),
+        () =>
+          issues.createComment({
+            ...issue,
+            body: warningComment(pr, decision.reasons, now),
+          }),
         // A Stale PR label someone else added has to go first, so the warning's own label
         // is the one that dates it.
-        ...(hasLabel(pr, LABELS.stale) ? [() => removeLabel(github, issue, LABELS.stale)] : []),
+        ...(hasLabel(pr, LABELS.stale)
+          ? [() => removeLabel(github, issue, LABELS.stale)]
+          : []),
         () => issues.addLabels({ ...issue, labels: [LABELS.stale] }),
       ]);
       break;
     case "close":
       await paced(intervalMs, [
-        () => issues.createComment({ ...issue, body: closingComment(pr, decision.reasons, now) }),
+        () =>
+          issues.createComment({
+            ...issue,
+            body: closingComment(pr, decision.reasons, now),
+          }),
         () => issues.addLabels({ ...issue, labels: [LABELS.backlogCleanup] }),
         close,
       ]);
@@ -499,7 +632,11 @@ interface Result {
 async function writeSummary(core: Core, results: Result[], live: boolean) {
   const rows = results
     .filter(({ decision }) => decision.action !== "none")
-    .sort((a, b) => ACTION_ORDER.indexOf(a.decision.action) - ACTION_ORDER.indexOf(b.decision.action))
+    .sort(
+      (a, b) =>
+        ACTION_ORDER.indexOf(a.decision.action) -
+        ACTION_ORDER.indexOf(b.decision.action),
+    )
     .map(({ pr, decision, failed }) => [
       `<a href="${pr.url}">#${pr.number}</a>`,
       authorLogin(pr),
@@ -507,8 +644,13 @@ async function writeSummary(core: Core, results: Result[], live: boolean) {
       decision.reasons.join(", "),
     ]);
   await core.summary
-    .addHeading(live ? "Stale PR triage" : "Stale PR triage (dry run: no PRs changed)")
-    .addRaw(`${results.length} open PRs, ${rows.length} with something outstanding.`, true)
+    .addHeading(
+      live ? "Stale PR triage" : "Stale PR triage (dry run: no PRs changed)",
+    )
+    .addRaw(
+      `${results.length} open PRs, ${rows.length} with something outstanding.`,
+      true,
+    )
     .addTable([
       [
         { data: "PR", header: true },
@@ -521,7 +663,8 @@ async function writeSummary(core: Core, results: Result[], live: boolean) {
     .write();
 }
 
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 export interface TriageInputs {
   github: GitHubClient;
@@ -559,14 +702,29 @@ export default async function triageStalePullRequests({
     try {
       let pr = await fetchPullRequest(github, repo, number);
       if (pr === null) continue;
-      if (!pr.isDraft && hasLabel(pr, LABELS.waitingOnAuthor) && (await clearStaleTurnLabel(github, issue, live))) {
-        core.info(`#${number}: -${LABELS.waitingOnAuthor} (the turn had already moved on)`);
+      if (
+        !pr.isDraft &&
+        hasLabel(pr, LABELS.waitingOnAuthor) &&
+        (await clearStaleTurnLabel(github, issue, live))
+      ) {
+        core.info(
+          `#${number}: -${LABELS.waitingOnAuthor} (the turn had already moved on)`,
+        );
         pr = withoutLabel(pr, LABELS.waitingOnAuthor, now);
       }
-      const decision = await confirmConflicts(github, repo, pr, decide(pr, now), mergeabilityRetryMs);
+      const decision = await confirmConflicts(
+        github,
+        repo,
+        pr,
+        decide(pr, now),
+        mergeabilityRetryMs,
+      );
       result = { pr, decision, failed: false };
 
-      if (decision.action !== "none") core.info(`#${number}: ${decision.action} (${decision.reasons.join(", ")})`);
+      if (decision.action !== "none")
+        core.info(
+          `#${number}: ${decision.action} (${decision.reasons.join(", ")})`,
+        );
       if (live && WRITES.includes(decision.action)) {
         await apply(github, issue, pr, decision, now, writeIntervalMs);
         await sleep(writeIntervalMs);

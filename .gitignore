@@ -369,3 +369,7 @@ ENV/
 *.class
 !gradle/wrapper/gradle-wrapper.jar
 
+frontend/
+scratch/
+
+

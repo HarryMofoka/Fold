@@ -1,0 +1,534 @@
+{
+  "source": {
+    "repo": "HarryMofoka/Ink",
+    "ref": "main",
+    "root": "docs"
+  },
+  "nav": [
+    {
+      "id": "overview",
+      "label": "Overview",
+      "icon": "compass",
+      "items": [
+        {
+          "id": "overview/welcome",
+          "label": "Welcome to Fold"
+        },
+        {
+          "id": "overview/quick-start",
+          "label": "Quick Start Guide"
+        },
+        {
+          "id": "overview/architecture",
+          "label": "Local-First Architecture"
+        },
+        {
+          "id": "overview/privacy-security",
+          "label": "Privacy & Security Model"
+        },
+        {
+          "id": "overview/desktop-app",
+          "label": "Desktop Application (Tauri)"
+        },
+        {
+          "id": "overview/offline-mode",
+          "label": "Offline & Air-Gapped Usage"
+        }
+      ]
+    },
+    {
+      "id": "organize",
+      "label": "Organize & Assemble",
+      "icon": "files",
+      "items": [
+        {
+          "id": "organize/merge-pdfs",
+          "label": "Merging Documents"
+        },
+        {
+          "id": "organize/split-pdfs",
+          "label": "Splitting PDFs & Page Ranges"
+        },
+        {
+          "id": "organize/page-grid",
+          "label": "Visual Page Grid & Reordering"
+        },
+        {
+          "id": "organize/rotate-pages",
+          "label": "Rotating & Orienting Pages"
+        },
+        {
+          "id": "organize/extract-delete",
+          "label": "Extracting & Deleting Pages"
+        },
+        {
+          "id": "organize/crop-scale",
+          "label": "Cropping & Canvas Scaling"
+        }
+      ]
+    },
+    {
+      "id": "edit",
+      "label": "Edit & Annotate",
+      "icon": "pen-tool",
+      "items": [
+        {
+          "id": "edit/editor-overview",
+          "label": "Document Editor Workspace"
+        },
+        {
+          "id": "edit/text-editing",
+          "label": "In-Place PDF Text Editing"
+        },
+        {
+          "id": "edit/form-filling",
+          "label": "Interactive Form Filling (AcroForms)"
+        },
+        {
+          "id": "edit/ink-drawing",
+          "label": "Freehand Drawing & Ink"
+        },
+        {
+          "id": "edit/highlighting",
+          "label": "Highlighting & Text Markups"
+        },
+        {
+          "id": "edit/annotations-shapes",
+          "label": "Callouts, Notes & Shapes"
+        },
+        {
+          "id": "edit/stamps",
+          "label": "Rubber Stamps & Business Seals"
+        },
+        {
+          "id": "edit/page-numbering",
+          "label": "Headers, Footers & Bates Numbering"
+        },
+        {
+          "id": "edit/table-of-contents",
+          "label": "Table of Contents & Bookmarks"
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "label": "Security & Redaction",
+      "icon": "shield-check",
+      "items": [
+        {
+          "id": "security/password-encryption",
+          "label": "Password Encryption & Permissions"
+        },
+        {
+          "id": "security/decrypt-pdf",
+          "label": "Decrypting & Unlocking PDFs"
+        },
+        {
+          "id": "security/metadata-sanitization",
+          "label": "Deep Metadata Sanitization"
+        },
+        {
+          "id": "security/redaction",
+          "label": "Permanent Vector Redaction"
+        },
+        {
+          "id": "security/signatures",
+          "label": "Handwritten & Digital Signatures"
+        },
+        {
+          "id": "security/mobile-scanner",
+          "label": "P2P Mobile Camera Scanner (WebRTC)"
+        }
+      ]
+    },
+    {
+      "id": "optimize",
+      "label": "Optimize & Convert",
+      "icon": "sliders",
+      "items": [
+        {
+          "id": "optimize/compression",
+          "label": "PDF Stream Compression"
+        },
+        {
+          "id": "optimize/flattening",
+          "label": "Annotation & Form Flattening"
+        },
+        {
+          "id": "optimize/image-to-pdf",
+          "label": "Images to PDF"
+        },
+        {
+          "id": "optimize/pdf-to-image",
+          "label": "PDF to Image Export"
+        },
+        {
+          "id": "optimize/extract-images",
+          "label": "Extracting Embedded Images"
+        }
+      ]
+    },
+    {
+      "id": "technical",
+      "label": "Technical & Development",
+      "icon": "code",
+      "items": [
+        {
+          "id": "technical/client-pdf-engine",
+          "label": "Client PDF Engine Architecture"
+        },
+        {
+          "id": "technical/file-storage",
+          "label": "File Storage & IndexedDB"
+        },
+        {
+          "id": "technical/building-from-source",
+          "label": "Building & Running Locally"
+        },
+        {
+          "id": "technical/keyboard-shortcuts",
+          "label": "Keyboard Shortcuts Reference"
+        },
+        {
+          "id": "technical/faq",
+          "label": "FAQ & Troubleshooting"
+        }
+      ]
+    }
+  ],
+  "docs": {
+    "overview/welcome": {
+      "id": "overview/welcome",
+      "title": "Welcome to Fold",
+      "description": "A high-level introduction to Fold, its core philosophy, and privacy-first document processing capabilities.",
+      "section": "Overview",
+      "markdown": "# Welcome to Fold\n\n> **Your PDFs. Still yours.**\n\n**Fold** is a 100% client-side, local-first document workspace designed from the ground up for privacy, performance, and autonomy. It provides comprehensive PDF manipulation—including merging, splitting, in-place text editing, AcroForm filling, annotation, encryption, redaction, and mobile scanning—without requiring third-party cloud uploads, user registration, or server infrastructure.\n\n---\n\n## Why Fold Was Created\n\nMost conventional online PDF converters require you to transmit sensitive documents (tax returns, employment agreements, medical histories, financial statements) to external cloud servers. Once uploaded, you forfeit control over where your data travels, who has access to it, and how long it persists on remote disks.\n\n**Fold reverses this paradigm entirely:**\n- **Zero Cloud Uploads:** All document parsing, vector rasterization, page assembly, and cryptographic calculations occur directly within your device's browser memory or native desktop shell.\n- **Air-Gapped by Design:** Load Fold once, disconnect from the internet, and every tool continues functioning with zero degradation.\n- **No Paywalls or Throttling:** No artificial 15 MB file caps, page limits, or promotional watermarks.\n- **Sovereign Privacy:** Compliant by architecture with HIPAA, GDPR, and confidentiality requirements.\n\n---\n\n## Core Capabilities at a Glance\n\n| Pillar | Key Features |\n| :--- | :--- |\n| **Organize & Assemble** | Multi-file merge, range split, visual thumbnail grid, page rotation, extraction, deletion, canvas crop, and dimension scaling. |\n| **Edit & Annotate** | Full visual editor canvas, in-place text replacement within content streams, AcroForm filling, freehand ink, highlighters, shapes, callouts, stamps, and Bates numbering. |\n| **Security & Privacy** | AES-128 and AES-256 password encryption, permission controls, decryption, deep metadata stripping, vector redaction, and P2P mobile scanning. |\n| **Optimize & Convert** | Intelligent stream compression, annotation flattening, multi-image to PDF, high-res PDF to image export, and embedded image extraction. |\n\n---\n\n## Next Steps\n\n- Check out the [Quick Start Guide](doc:overview/quick-start) to begin processing files immediately.\n- Learn about the [Local-First Architecture](doc:overview/architecture) powering Fold's in-browser engine.\n- Explore the [Privacy & Security Model](doc:overview/privacy-security) to understand how Fold protects your confidential records.",
+      "sourcePath": "docs/overview/welcome.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/welcome.md"
+    },
+    "overview/quick-start": {
+      "id": "overview/quick-start",
+      "title": "Quick Start Guide",
+      "description": "How to get started with Fold in under two minutes: opening documents, using tools, and exporting results.",
+      "section": "Overview",
+      "markdown": "# Quick Start Guide\n\nGetting started with Fold requires no account setup, software installation, or credit card.\n\n---\n\n## Step 1: Open Fold\n\nNavigate to Fold in your web browser:\n```\nhttp://localhost:5173\n```\n*(Or launch the native desktop application on Windows, macOS, or Linux).* \n\n---\n\n## Step 2: Add Your Documents\n\nFold supports multiple ways to stage files in your local session workbench:\n1. **Drag and Drop:** Drag one or more PDF files directly from your file manager onto the workspace.\n2. **File Picker:** Click the **Add Files** card or press Ctrl + O (Cmd + O on macOS).\n3. **P2P Mobile Scanner:** Click **Scan with Phone** to scan physical pages using your mobile camera over a local WebRTC data tunnel.\n\n> [!NOTE]\n> Files are loaded into memory and cached locally in your browser's IndexedDB. No files are transmitted to any server.\n\n---\n\n## Step 3: Select a Tool or Editor\n\n- **Visual Page Grid:** Click on any staged document thumbnail to inspect, reorder, rotate, or delete individual pages.\n- **Interactive Editor:** Click **Edit** to open the full visual document canvas. Add text annotations, sign agreements, highlight paragraphs, or fill AcroForm fields.\n- **Quick Tools:** Access the top navigation bar or press Ctrl + K to launch the command palette and run operations like **Merge**, **Compress**, or **Protect**.\n\n---\n\n## Step 4: Download Your Output\n\nWhen finished, click **Download** or press Ctrl + S. Your browser immediately generates and downloads the final processed PDF file at native disk speeds.",
+      "sourcePath": "docs/overview/quick-start.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/quick-start.md"
+    },
+    "overview/architecture": {
+      "id": "overview/architecture",
+      "title": "Local-First Architecture",
+      "description": "Technical overview of Fold's client-side runtime, WebAssembly integration, and memory isolation.",
+      "section": "Overview",
+      "markdown": "# Local-First Architecture\n\nFold is engineered as a decoupled, local-first web application where document manipulation, cryptography, and rendering occur entirely on the client side.\n\n---\n\n## The Client Execution Stack\n\n```\n┌────────────────────────────────────────────────────────┐\n│                        Fold UI                         │\n│   (React 19 · Vite · TypeScript · Mantine UI · Tailwind)│\n└───────────────────────────┬────────────────────────────┘\n                            │ Typed Operations\n                            ▼\n┌────────────────────────────────────────────────────────┐\n│               Client-Side Execution Engine             │\n│  - @cantoo/pdf-lib (Page assembly, merge, split, crypto)│\n│  - Mozilla pdfjs-dist (Viewport canvas & text layers)  │\n│  - WebAssembly Runtimes (High-speed stream parsing)    │\n│  - WebRTC Peer-to-Peer Tunnel (Direct Mobile Scanner)  │\n│  - IndexedDB Cache (Local-only file history & thumbs)  │\n└───────────────────────────┬────────────────────────────┘\n                            │ Direct Local Save\n                            ▼\n                 [ User's Local Storage ]\n```\n\n---\n\n## Key Architectural Principles\n\n### 1. In-Memory Processing via ArrayBuffer\nWhen you open a PDF, Fold reads the raw bytes into a browser ArrayBuffer. Low-level PDF object streams, cross-reference tables, and font dictionaries are parsed directly in memory.\n\n### 2. State Isolation\nDocument payloads are held in memory references outside React's render loop (useRef<Map>). This prevents memory duplication and ensures the UI remains smooth and responsive even when handling 100MB+ documents.\n\n### 3. Local Persistence via IndexedDB\nFold utilizes browser IndexedDB to persist recent file stubs and pre-generated thumbnails across browser reloads. This persistent cache is entirely local to your origin domain and is never synchronized to external databases.",
+      "sourcePath": "docs/overview/architecture.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/architecture.md"
+    },
+    "overview/privacy-security": {
+      "id": "overview/privacy-security",
+      "title": "Privacy & Security Model",
+      "description": "Detailed explanation of Fold's confidentiality guarantees, mathematical privacy, and zero-telemetry architecture.",
+      "section": "Overview",
+      "markdown": "# Privacy & Security Model\n\nFold was designed with an uncompromising standard: **true privacy through mathematical and physical isolation**.\n\n---\n\n## How Fold Protects Your Confidentiality\n\n### 1. Zero Network Egress\nTraditional SaaS applications rely on privacy policies and Terms of Service to promise they will not misuse your data. Fold eliminates the need for trust by eliminating the network transmission altogether. During document processing, zero bytes of your PDF are sent over the internet.\n\n### 2. Verification (Air-Gap Test)\nYou can verify Fold's privacy model at any time:\n1. Open Fold in your browser.\n2. Disconnect your computer from Wi-Fi or unplug your Ethernet cable.\n3. Open any PDF, apply edits, merge documents, redact sensitive paragraphs, and download the output.\n4. Open your browser Developer Tools (F12) and check the **Network** tab: no requests leave your machine.\n\n---\n\n## Zero Telemetry & Analytics\n\nFold contains:\n- No PostHog, Google Analytics, or Mixpanel tracking.\n- No behavioral session recording (FullStory, Hotjar).\n- No error beacons reporting file metadata or document contents.\n- No third-party ad pixels or tracking cookies.\n\nYour document names, page counts, text contents, and usage frequencies remain strictly private to you.",
+      "sourcePath": "docs/overview/privacy-security.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/privacy-security.md"
+    },
+    "overview/desktop-app": {
+      "id": "overview/desktop-app",
+      "title": "Desktop Application (Tauri)",
+      "description": "Installing, building, and using Fold as a standalone native desktop application for Windows, macOS, and Linux.",
+      "section": "Overview",
+      "markdown": "# Desktop Application (Tauri)\n\nWhile Fold runs seamlessly in any modern web browser, it also ships as a native cross-platform desktop application powered by **Tauri v2** (Rust).\n\n---\n\n## Benefits of the Desktop Edition\n\n* **System Integration:** Integrates directly with native OS file dialogs, system menus, and keyboard shortcuts.\n* **Windows Explorer Thumbnails:** Includes an optional lightweight Windows COM extension providing PDF page previews directly in Windows Explorer folders.\n* **Standalone Execution:** Runs as an isolated desktop executable without needing a browser window.\n* **Enhanced Memory Limits:** Bypasses browser tab memory caps for handling exceptionally large documents.\n\n---\n\n## Running in Desktop Development Mode\n\n```bash\nnpm run desktop:dev\n```\n\n---\n\n## Building Native Installers\n\n```bash\nnpm run desktop:build\n```\n\nThe compiled binaries will be output to `src-tauri/target/release/bundle/`.",
+      "sourcePath": "docs/overview/desktop-app.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/desktop-app.md"
+    },
+    "overview/offline-mode": {
+      "id": "overview/offline-mode",
+      "title": "Offline & Air-Gapped Usage",
+      "description": "Running Fold in high-security, classified, or disconnected offline environments.",
+      "section": "Overview",
+      "markdown": "# Offline & Air-Gapped Usage\n\nFold is engineered to operate seamlessly in air-gapped, offline, and classified network environments where internet access is restricted or forbidden.\n\n---\n\n## Operating in Disconnected Environments\n\n1. **Self-Contained Bundles:** Fold packages all dependencies, vector icons, and font definitions locally.\n2. **Local Font Subsetting:** Common typography (Helvetica, Times New Roman, Courier) is embedded directly via standard PDF fonts without requesting Google Fonts at runtime.\n3. **WebAssembly Standalone:** Pre-compiled WebAssembly binaries are bundled with the application and loaded via local URLs.\n\n> [!TIP]\n> For critical compliance workflows (legal, healthcare, defence), you can host Fold on an internal intranet server or run the standalone desktop installer on completely air-gapped workstations.",
+      "sourcePath": "docs/overview/offline-mode.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/overview/offline-mode.md"
+    },
+    "organize/merge-pdfs": {
+      "id": "organize/merge-pdfs",
+      "title": "Merging Documents",
+      "description": "Combine multiple PDF documents into a unified file with drag-and-drop sequencing.",
+      "section": "Organize & Assemble",
+      "markdown": "# Merging Documents\n\nThe **Merge PDFs** tool combines multiple independent PDF documents into a single, cohesive file while preserving original vector quality, bookmarks, and layout fidelity.\n\n---\n\n## How to Merge PDFs\n\n1. Open the **Merge** tool from the navigation bar or home screen.\n2. Drag and drop two or more PDF files into the upload zone.\n3. **Reorder Files:** Drag document cards up or down to set the desired sequence.\n4. Click **Merge PDFs**.\n5. The combined PDF is generated instantly in memory and downloaded to your computer.\n\n---\n\n## Technical Details\n\n- **Object Stream Preservation:** Fold uses `useObjectStreams: true` to keep the resulting file size compact.\n- **Bookmark & Outline Stitching:** Fold automatically merges document outlines so you can easily navigate between the merged sections.\n- **Encryption Handling:** If one of the source PDFs is password-protected, Fold will prompt you for the password before merging.",
+      "sourcePath": "docs/organize/merge-pdfs.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/merge-pdfs.md"
+    },
+    "organize/split-pdfs": {
+      "id": "organize/split-pdfs",
+      "title": "Splitting PDFs & Page Ranges",
+      "description": "Disassemble large PDFs by custom page ranges, fixed increments, or extract every page.",
+      "section": "Organize & Assemble",
+      "markdown": "# Splitting PDFs & Page Ranges\n\nThe **Split PDFs** tool allows you to extract specific sections or divide a large document into smaller files.\n\n---\n\n## Splitting Modes\n\nFold provides flexible options for splitting:\n\n| Mode | Syntax Example | Result |\n| :--- | :--- | :--- |\n| **Custom Ranges** | `1-3, 5, 8-12` | Creates a single PDF containing only pages 1 through 3, page 5, and pages 8 through 12. |\n| **Single Pages** | *(Leave blank or select All)* | Splits every page into its own individual PDF and bundles them into a downloadable ZIP archive. |\n| **Fixed Increments** | Split every *N* pages (e.g. 5) | Divides a 20-page document into four 5-page PDF files. |\n\n---\n\n## Page Range Expression Syntax\n\nFold supports standard page numbering syntax:\n- `1`: Single page.\n- `1-5`: Continuous range from page 1 to 5.\n- `1,3,7`: Specific non-contiguous pages.\n- `1-4, 7-9, 12`: Combinations of ranges and individual pages.",
+      "sourcePath": "docs/organize/split-pdfs.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/split-pdfs.md"
+    },
+    "organize/page-grid": {
+      "id": "organize/page-grid",
+      "title": "Visual Page Grid & Reordering",
+      "description": "Manage page orders visually using drag-and-drop thumbnail cards, inversion, and duplication.",
+      "section": "Organize & Assemble",
+      "markdown": "# Visual Page Grid & Reordering\n\nThe **Visual Page Grid** provides an intuitive, high-resolution visual overview of every page in your document.\n\n---\n\n## Key Capabilities\n\n- **Drag-and-Drop Reordering:** Click and drag any page thumbnail to change its position in the document.\n- **Multi-Page Selection:** Hold Ctrl (Cmd on macOS) to select multiple pages, or hold Shift to select a range of pages.\n- **Invert Order:** Reverse the entire page sequence with a single click (ideal for double-sided scans).\n- **Duplicate Pages:** Clone selected pages anywhere in the document.\n- **Delete Pages:** Select unwanted pages and press Delete or click the trash icon.\n- **Rotate Individual Pages:** Rotate individual pages by 90° increments directly on each thumbnail card.",
+      "sourcePath": "docs/organize/page-grid.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/page-grid.md"
+    },
+    "organize/rotate-pages": {
+      "id": "organize/rotate-pages",
+      "title": "Rotating & Orienting Pages",
+      "description": "Correct page orientations across entire files or selected individual pages.",
+      "section": "Organize & Assemble",
+      "markdown": "# Rotating & Orienting Pages\n\nThe **Rotate Pages** tool adjusts the viewing orientation of PDF pages in 90°, 180°, or 270° increments.\n\n---\n\n## Usage\n\n1. Open the **Rotate** tool.\n2. Select your rotation angle:\n   - **90° Clockwise**\n   - **90° Counter-Clockwise**\n   - **180° Flip**\n3. Specify target pages:\n   - **All Pages**\n   - **Even Pages Only**\n   - **Odd Pages Only**\n   - **Custom Page Range** (e.g. `1, 3, 5-8`)\n4. Click **Apply Rotation** to save the changes.",
+      "sourcePath": "docs/organize/rotate-pages.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/rotate-pages.md"
+    },
+    "organize/extract-delete": {
+      "id": "organize/extract-delete",
+      "title": "Extracting & Deleting Pages",
+      "description": "Selectively extract specific pages into a new document or remove pages permanently.",
+      "section": "Organize & Assemble",
+      "markdown": "# Extracting & Deleting Pages\n\n## Extracting Pages\nTo pull specific pages out into a brand-new PDF:\n1. Select the **Extract Pages** tool.\n2. Enter the page numbers or ranges to extract (e.g. `2, 4-6`).\n3. Click **Extract**. Fold generates a clean PDF containing only the requested pages.\n\n---\n\n## Deleting Pages\nTo remove unwanted pages (e.g. blank sheets, confidential annexes):\n1. Select the **Remove Pages** tool.\n2. Enter the pages you wish to purge.\n3. Click **Remove Pages**. Fold rebuilds the PDF object tree, completely stripping the unselected pages from the output.",
+      "sourcePath": "docs/organize/extract-delete.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/extract-delete.md"
+    },
+    "organize/crop-scale": {
+      "id": "organize/crop-scale",
+      "title": "Cropping & Canvas Scaling",
+      "description": "Trim margins, remove scanner borders, and rescale pages to standard print paper sizes.",
+      "section": "Organize & Assemble",
+      "markdown": "# Cropping & Canvas Scaling\n\nThe **Crop & Scale** tool lets you adjust page boundaries, eliminate scanner margins, and resize document dimensions.\n\n---\n\n## Visual Margin Cropping\n- Drag the crop handles on the interactive canvas to define the active content area.\n- Preview the cropped page in real time before applying.\n- Choose whether to apply the crop box to the current page or across all pages uniformly.\n\n---\n\n## Canvas Rescaling\nRescale existing documents to standardized paper formats:\n- **US Letter** (8.5 × 11 in)\n- **A4** (210 × 297 mm)\n- **Legal** (8.5 × 14 in)\n- **A3** (297 × 420 mm)",
+      "sourcePath": "docs/organize/crop-scale.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/organize/crop-scale.md"
+    },
+    "edit/editor-overview": {
+      "id": "edit/editor-overview",
+      "title": "Document Editor Workspace",
+      "description": "Navigate and edit documents in Fold's full visual canvas editor.",
+      "section": "Edit & Annotate",
+      "markdown": "# Document Editor Workspace\n\nFold's visual editor provides a full interactive workspace for inspecting, annotating, and editing PDF documents.\n\n---\n\n## Canvas Features\n\n- **Continuous Scroll & Single-Page Modes:** Switch between smooth vertical scrolling and focused single-page viewports.\n- **Two-Page Spread:** View documents in dual-page book layout.\n- **Fluid Zoom:** Zoom from 25% up to 500% with crisp vector text rendering. Press Ctrl + 0 to fit to width.\n- **Page Thumbnail Drawer:** Toggle the sidebar to jump instantly to any page in the document.",
+      "sourcePath": "docs/edit/editor-overview.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/editor-overview.md"
+    },
+    "edit/text-editing": {
+      "id": "edit/text-editing",
+      "title": "In-Place PDF Text Editing",
+      "description": "Find and replace typographical strings directly in low-level PDF content streams without rasterization.",
+      "section": "Edit & Annotate",
+      "markdown": "# In-Place PDF Text Editing\n\nUnlike conventional tools that merely draw white boxes over old text, Fold supports **true stream-level text editing**.\n\n---\n\n## How In-Place Text Editing Works\n\n1. Open a document in the **Text Editor**.\n2. Click on the text element you wish to modify, or use **Find and Replace**.\n3. Enter the replacement string.\n4. Fold parses the low-level PDF content stream, locates the exact text operator (`Tj` or `TJ`), adjusts character kerning matrices, and replaces the character codes in place.\n\n---\n\n## Advantages\n\n- **Preserves Vector Sharpness:** Text remains sharp and selectable at any zoom level.\n- **Zero Rasterization:** Document file size does not inflate.\n- **Searchable:** Modified text continues to be indexed by PDF readers.",
+      "sourcePath": "docs/edit/text-editing.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/text-editing.md"
+    },
+    "edit/form-filling": {
+      "id": "edit/form-filling",
+      "title": "Interactive Form Filling (AcroForms)",
+      "description": "Detect, fill out, and unlock interactive PDF form fields.",
+      "section": "Edit & Annotate",
+      "markdown": "# Interactive Form Filling (AcroForms)\n\nFold provides native support for interactive AcroForm documents.\n\n---\n\n## Supported Form Elements\n\n- **Text Inputs:** Single-line and multi-line text boxes with custom font sizing.\n- **Checkboxes & Radio Buttons:** Toggle option groups and boolean fields.\n- **Dropdowns & Combo Boxes:** Select choices from pre-configured lists.\n\n---\n\n## Unlocking Read-Only Forms\nIf a government or corporate form is locked against editing, use the **Unlock Forms** tool. Fold clears the `Ff` read-only bitflag on every field dictionary, allowing you to fill out previously locked forms.",
+      "sourcePath": "docs/edit/form-filling.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/form-filling.md"
+    },
+    "edit/ink-drawing": {
+      "id": "edit/ink-drawing",
+      "title": "Freehand Drawing & Ink",
+      "description": "Draw vector annotations, hand-drawn diagrams, and sketches with smooth bezier curves.",
+      "section": "Edit & Annotate",
+      "markdown": "# Freehand Drawing & Ink\n\nThe **Ink Tool** allows you to sketch, underline, and write directly on PDF pages using mouse, stylus, or touchscreen input.\n\n---\n\n## Features\n\n- **Bezier Smoothing:** Input coordinates are dynamically interpolated into smooth bezier paths, eliminating jagged edges.\n- **Adjustable Line Weight:** Choose from fine (1px) to bold (12px) stroke widths.\n- **Color Palette:** Select from curated colors or choose custom hex values.\n- **Undo / Redo:** Full history tracking allows you to reverse individual strokes.",
+      "sourcePath": "docs/edit/ink-drawing.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/ink-drawing.md"
+    },
+    "edit/highlighting": {
+      "id": "edit/highlighting",
+      "title": "Highlighting & Text Markups",
+      "description": "Highlight, underline, and strike through text with precision geometric snapping.",
+      "section": "Edit & Annotate",
+      "markdown": "# Highlighting & Text Markups\n\nFold's markup tools allow you to highlight key passages and review documents with precision.\n\n---\n\n## Markup Tools\n\n- **Text Highlighter:** Semi-transparent color overlay that snaps precisely to text glyphs.\n- **Underline:** Clean vector lines drawn along the baseline of selected words.\n- **Strikethrough:** Horizontal line indicating removed or revised content.\n\n> [!TIP]\n> Colors can be customized to differentiate review categories (e.g. Yellow for notes, Green for approvals, Pink for questions).",
+      "sourcePath": "docs/edit/highlighting.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/highlighting.md"
+    },
+    "edit/annotations-shapes": {
+      "id": "edit/annotations-shapes",
+      "title": "Callouts, Notes & Shapes",
+      "description": "Add geometric vector shapes, speech bubbles, and sticky note comments.",
+      "section": "Edit & Annotate",
+      "markdown": "# Callouts, Notes & Shapes\n\nEnhance documents with geometric callouts, arrows, and notes:\n\n---\n\n## Geometric Shapes\n- **Rectangles & Rounded Boxes:** Frame important diagrams or sections.\n- **Ellipses & Circles:** Highlight signatures or key figures.\n- **Arrows & Lines:** Point directly to specific clauses or diagrams.\n- **Polylines:** Connect multiple points across complex flowcharts.\n\n---\n\n## Callouts & Sticky Notes\n- Place collapsible sticky notes that expand to reveal detailed reviewer feedback.\n- Add callout text boxes with connecting pointers.",
+      "sourcePath": "docs/edit/annotations-shapes.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/annotations-shapes.md"
+    },
+    "edit/stamps": {
+      "id": "edit/stamps",
+      "title": "Rubber Stamps & Business Seals",
+      "description": "Apply business approval stamps, confidentiality markers, and custom seals.",
+      "section": "Edit & Annotate",
+      "markdown": "# Rubber Stamps & Business Seals\n\nFold includes a comprehensive library of standard business stamps and custom stamp generators.\n\n---\n\n## Pre-Built Stamp Library\n- **APPROVED** (Green)\n- **CONFIDENTIAL** (Red)\n- **DRAFT** (Gray)\n- **FINAL** (Blue)\n- **VOID** (Red)\n- **RECEIVED** (Teal)\n\n---\n\n## Custom Text Stamps\nGenerate customized rubber stamps with your organization name, user name, and automatic live date/time stamps.",
+      "sourcePath": "docs/edit/stamps.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/stamps.md"
+    },
+    "edit/page-numbering": {
+      "id": "edit/page-numbering",
+      "title": "Headers, Footers & Bates Numbering",
+      "description": "Insert dynamic page numbering, custom headers, footers, and legal Bates stamps.",
+      "section": "Edit & Annotate",
+      "markdown": "# Headers, Footers & Bates Numbering\n\nAdd professional pagination to single or multi-file document sets.\n\n---\n\n## Formatting Options\n\nFold supports dynamic template variables:\n- `{n}`: Current page number.\n- `{total}`: Total page count.\n- `{filename}`: Document title.\n\n**Example Formats:**\n- `Page {n} of {total}`\n- `Doc #104 - Page {n}`\n- `CONFIDENTIAL - {n}/{total}`\n\n---\n\n## Bates Numbering\nFor legal and discovery production, Fold supports custom prefix, suffix, and padded sequential Bates numbers (e.g. `ACME-000142`).",
+      "sourcePath": "docs/edit/page-numbering.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/page-numbering.md"
+    },
+    "edit/table-of-contents": {
+      "id": "edit/table-of-contents",
+      "title": "Table of Contents & Bookmarks",
+      "description": "Inspect, create, edit, and organize hierarchical PDF bookmarks and outlines.",
+      "section": "Edit & Annotate",
+      "markdown": "# Table of Contents & Bookmarks\n\nFold provides full control over the internal PDF outline hierarchy.\n\n---\n\n## Features\n\n- **Inspect Bookmarks:** View existing document navigation trees in the sidebar.\n- **Add Bookmarks:** Create bookmarks targeting specific pages, zoom levels, or viewport coordinates.\n- **Reorder & Nest:** Drag bookmarks to create parent-child relationships and chapter sub-sections.\n- **Delete & Rename:** Update outdated outline labels without altering document pages.",
+      "sourcePath": "docs/edit/table-of-contents.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/edit/table-of-contents.md"
+    },
+    "security/password-encryption": {
+      "id": "security/password-encryption",
+      "title": "Password Encryption & Permissions",
+      "description": "Protect documents with military-grade AES-128 or AES-256 encryption and permission locks.",
+      "section": "Security & Redaction",
+      "markdown": "# Password Encryption & Permissions\n\nFold allows you to encrypt PDF files using standard **AES-128** or **AES-256** bit encryption.\n\n---\n\n## User vs. Owner Passwords\n\n- **User Password (Open Password):** Required to open and view the document. Without this password, readers cannot view the content.\n- **Owner Password (Permissions Password):** Configures fine-grained restrictions on what authenticated readers can do with the document.\n\n---\n\n## Granular Permission Controls\n\nWhen an Owner Password is set, you can restrict:\n- Printing: Prohibit printing or allow only low-resolution drafts.\n- Copying: Prevent text and image selection and copying to clipboard.\n- Modifications: Block page reordering, insertion, and deletion.\n- Annotations & Forms: Disallow adding comments or filling forms.\n- Screen Readers: Maintain accessibility access for vision-impaired users.",
+      "sourcePath": "docs/security/password-encryption.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/password-encryption.md"
+    },
+    "security/decrypt-pdf": {
+      "id": "security/decrypt-pdf",
+      "title": "Decrypting & Unlocking PDFs",
+      "description": "Remove passwords and permission restrictions from documents you hold credentials for.",
+      "section": "Security & Redaction",
+      "markdown": "# Decrypting & Unlocking PDFs\n\nIf you hold the password for an encrypted PDF, the **Decrypt PDF** tool removes the encryption wrapper so the file can be stored or shared without future password prompts.\n\n---\n\n## Usage\n\n1. Open the **Decrypt PDF** tool.\n2. Select your encrypted PDF file.\n3. Enter the valid user or owner password.\n4. Click **Unlock & Save**. Fold strips the encryption dictionary and exports a standard, unprotected PDF.",
+      "sourcePath": "docs/security/decrypt-pdf.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/decrypt-pdf.md"
+    },
+    "security/metadata-sanitization": {
+      "id": "security/metadata-sanitization",
+      "title": "Deep Metadata Sanitization",
+      "description": "Purge hidden metadata, author identities, revision histories, and structural tracking tags.",
+      "section": "Security & Redaction",
+      "markdown": "# Deep Metadata Sanitization\n\nPDF files often contain invisible metadata detailing who created the document, which operating system was used, exact edit timestamps, and prior revision trees.\n\n---\n\n## What Fold Sanitizes\n\nWhen you run **Sanitize PDF**, Fold strips:\n- **Document Info Dictionary:** Title, Author, Subject, Keywords, Creator, Producer.\n- **Creation & Modification Dates:** All timestamp records.\n- **XMP Metadata Trees:** Deep XML metadata embedded by Adobe products.\n- **Embedded JavaScript & Actions:** Removes `OpenAction`, `JavaScript`, and document-level scripts to eliminate malicious execution risks.\n- **Printer & Device Tags:** Strips scanner profiles and ICC color management records.",
+      "sourcePath": "docs/security/metadata-sanitization.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/metadata-sanitization.md"
+    },
+    "security/redaction": {
+      "id": "security/redaction",
+      "title": "Permanent Vector Redaction",
+      "description": "Permanently excise confidential text, figures, and vectors from the underlying PDF stream.",
+      "section": "Security & Redaction",
+      "markdown": "# Permanent Vector Redaction\n\n> [!WARNING]\n> Drawing a black rectangle over text in a standard graphics program does **not** protect your information. Anyone can copy the text underneath or remove the rectangle layer!\n\n---\n\n## True Vector Redaction\n\nFold implements **destructive byte-level redaction**:\n1. Select the text, figure, or table to redact.\n2. Click **Apply Redaction**.\n3. Fold completely excises the character codes and path operators from the PDF content stream.\n4. The pixels are permanently destroyed and cannot be recovered, selected, or searched.",
+      "sourcePath": "docs/security/redaction.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/redaction.md"
+    },
+    "security/signatures": {
+      "id": "security/signatures",
+      "title": "Handwritten & Digital Signatures",
+      "description": "Sign contracts and documents using trackpads, touchscreens, or uploaded signature stamps.",
+      "section": "Security & Redaction",
+      "markdown": "# Handwritten & Digital Signatures\n\nFold makes it simple to sign agreements and contracts locally:\n\n---\n\n## Signature Methods\n\n- **Draw Signature:** Use your trackpad, mouse, or stylus to draw a natural signature with smooth bezier curves.\n- **Upload Image:** Import a scanned signature PNG with automatic transparent background detection.\n- **Saved Signatures:** Securely cache your signature locally in IndexedDB for fast re-use across multiple agreements.\n\n---\n\n## Placing Signatures\n- Drag and resize your signature block on the active page.\n- Choose whether to leave the signature as an interactive overlay or use **Flatten Document** to permanently fuse it into the page layer.",
+      "sourcePath": "docs/security/signatures.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/signatures.md"
+    },
+    "security/mobile-scanner": {
+      "id": "security/mobile-scanner",
+      "title": "P2P Mobile Camera Scanner (WebRTC)",
+      "description": "Digitize physical paper using your smartphone camera over a direct, local peer-to-peer connection.",
+      "section": "Security & Redaction",
+      "markdown": "# P2P Mobile Camera Scanner (WebRTC)\n\nFold includes a groundbreaking **Mobile Camera Scanner** that allows you to scan paper documents using your phone without routing files through third-party cloud servers.\n\n---\n\n## How It Works\n\n1. On your computer in Fold, open **Mobile Scanner**.\n2. Fold displays a dynamic pairing QR code containing a secure WebRTC session handshake.\n3. Point your smartphone camera at the QR code.\n4. Your phone connects **directly to your laptop over a local WebRTC data channel**.\n5. Take photos of physical documents on your phone: they transfer directly to your laptop workspace in real time.\n6. Fold automatically applies perspective correction and contrast enhancement to produce crisp PDF pages.",
+      "sourcePath": "docs/security/mobile-scanner.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/security/mobile-scanner.md"
+    },
+    "optimize/compression": {
+      "id": "optimize/compression",
+      "title": "PDF Stream Compression",
+      "description": "Reduce document file sizes using intelligent object stream re-encoding and image optimization.",
+      "section": "Optimize & Convert",
+      "markdown": "# PDF Stream Compression\n\nLarge PDF files can be cumbersome to email or upload to government portals. The **Compress PDF** tool significantly reduces file sizes while maintaining readability.\n\n---\n\n## Optimization Techniques\n\n- **Object Stream Compaction:** Combines individual PDF object dictionaries into unified compressed streams.\n- **Image Resampling:** Downsamples oversized raster images to 150 or 300 DPI (ideal for web and email distribution).\n- **Redundant Data Elimination:** Purges duplicate font subsets and unreferenced objects.",
+      "sourcePath": "docs/optimize/compression.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/optimize/compression.md"
+    },
+    "optimize/flattening": {
+      "id": "optimize/flattening",
+      "title": "Annotation & Form Flattening",
+      "description": "Fuse form fields, vector signatures, and annotations permanently into the page canvas.",
+      "section": "Optimize & Convert",
+      "markdown": "# Annotation & Form Flattening\n\nThe **Flatten PDF** tool permanently bakes all interactive AcroForm fields, digital signatures, rubber stamps, and markup annotations directly into the base page rendering layer.\n\n---\n\n## When to Flatten a Document\n\n- **Submitting Legal & Tax Forms:** Ensures recipient software cannot alter entered values.\n- **Standardizing Appearance:** Guarantees that annotations appear identically in every PDF viewer, browser, and print output.\n- **Preventing Signature Extraction:** Fuses signature graphics into the underlying document pixels.",
+      "sourcePath": "docs/optimize/flattening.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/optimize/flattening.md"
+    },
+    "optimize/image-to-pdf": {
+      "id": "optimize/image-to-pdf",
+      "title": "Images to PDF",
+      "description": "Convert batches of PNG, JPG, WebP, BMP, and TIFF images into high-resolution multi-page PDFs.",
+      "section": "Optimize & Convert",
+      "markdown": "# Images to PDF\n\nThe **Images to PDF** tool converts collections of graphics into a clean, unified PDF document.\n\n---\n\n## Supported Formats\n- **PNG** (with transparency preservation)\n- **JPEG / JPG**\n- **WebP**\n- **SVG** (vector scaling)\n- **TIFF / BMP**\n\n---\n\n## Layout Controls\n- **Page Sizing:** Match original image dimensions, or fit to standard print sizes (A4, US Letter).\n- **Margins:** Set margin padding (None, Small, Large).\n- **Sequencing:** Drag and reorder images before generating the PDF.",
+      "sourcePath": "docs/optimize/image-to-pdf.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/optimize/image-to-pdf.md"
+    },
+    "optimize/pdf-to-image": {
+      "id": "optimize/pdf-to-image",
+      "title": "PDF to Image Export",
+      "description": "Rasterize PDF pages into standalone high-fidelity PNG or JPEG images.",
+      "section": "Optimize & Convert",
+      "markdown": "# PDF to Image Export\n\nThe **PDF to Image** tool renders document pages into individual high-resolution image files.\n\n---\n\n## Resolution Profiles\n\n| Profile | DPI | Ideal Use Case |\n| :--- | :--- | :--- |\n| **Standard** | 72 DPI | Fast web preview & thumbnails. |\n| **High** | 150 DPI | Presentation slides & email sharing. |\n| **Print Quality** | 300 DPI | High-resolution archival & printing. |\n| **Ultra High** | 600 DPI | Detailed CAD drawings & architectural blueprints. |\n\n---\n\n## Export Formats\n- **PNG:** Lossless format recommended for text-heavy documents.\n- **JPEG:** Compact format recommended for photography and scanned brochures.",
+      "sourcePath": "docs/optimize/pdf-to-image.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/optimize/pdf-to-image.md"
+    },
+    "optimize/extract-images": {
+      "id": "optimize/extract-images",
+      "title": "Extracting Embedded Images",
+      "description": "Extract all embedded raster images from within a PDF file into a downloadable ZIP archive.",
+      "section": "Optimize & Convert",
+      "markdown": "# Extracting Embedded Images\n\nIf you have a PDF containing photos, charts, or illustrations, the **Extract Images** tool extracts every raw photographic asset without recompression quality loss.\n\n---\n\n## Features\n- Extracts embedded JPEG, PNG, and TIFF objects.\n- Preserves native image resolution and color spaces (RGB, CMYK).\n- Bundles all extracted assets into an organized ZIP archive.",
+      "sourcePath": "docs/optimize/extract-images.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/optimize/extract-images.md"
+    },
+    "technical/client-pdf-engine": {
+      "id": "technical/client-pdf-engine",
+      "title": "Client PDF Engine Architecture",
+      "description": "Deep dive into ClientPdfEngine.ts, @cantoo/pdf-lib, and Mozilla pdfjs-dist integration.",
+      "section": "Technical & Development",
+      "markdown": "# Client PDF Engine Architecture\n\nThe core of Fold's document processing is located in `src/services/clientPdfEngine.ts`.\n\n---\n\n## Implementation Overview\n\nFold combines two complementary document processing technologies:\n1. **`@cantoo/pdf-lib`:** Used for constructive and structural document mutations:\n   - Creating new PDF documents.\n   - Merging, copying, and rearranging pages.\n   - Encrypting and decrypting document dictionaries.\n   - Drawing text, watermarks, stamps, and geometric paths.\n2. **Mozilla `pdfjs-dist`:** Used for visual viewport rendering:\n   - Rendering vector PDF pages onto HTML5 `<canvas>` elements.\n   - Extracting text content layers for selection and search.\n   - Generating high-speed page preview thumbnails.\n\n---\n\n## Memory Lifecycle\n\nAll file operations follow strict memory cleanup patterns:\n- Explicit `.destroy()` invocations on PDF.js document proxies.\n- Immediate revocation of created Blob URLs (`URL.revokeObjectURL`).\n- ArrayBuffers are transferred or dereferenced after operations complete.",
+      "sourcePath": "docs/technical/client-pdf-engine.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/technical/client-pdf-engine.md"
+    },
+    "technical/file-storage": {
+      "id": "technical/file-storage",
+      "title": "File Storage & IndexedDB",
+      "description": "How Fold manages persistent document lineage, version tracking, and LRU thumbnail caches in IndexedDB.",
+      "section": "Technical & Development",
+      "markdown": "# File Storage & IndexedDB\n\nFold implements a client-side file storage and version tracking architecture using browser IndexedDB.\n\n---\n\n## Data Structures\n\nDocument metadata travels alongside file payloads as `FoldFileStub` records:\n\n```typescript\ninterface FoldFileStub {\n  id: FileId;                     // Unique document UUID\n  quickKey: string;               // Deduplication key (name|size|modified)\n  name: string;\n  size: number;\n  type: string;\n  lastModified: number;\n  thumbnailUrl?: string;          // Generated thumbnail blob URL\n  isLeaf: boolean;                // True if current latest version\n  versionNumber?: number;         // Incremental version tracking (v1, v2, v3)\n  toolHistory?: ToolOperation[];  // Complete sequence of applied operations\n}\n```\n\n---\n\n## Version Lineage\n\nWhen a tool operation completes (e.g. compressing an existing document):\n1. The original version is marked as `isLeaf: false`.\n2. A new child stub is generated with incremented version number (`v2`) and marked `isLeaf: true`.\n3. Users can inspect the document history drawer to view or restore previous versions at any time.",
+      "sourcePath": "docs/technical/file-storage.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/technical/file-storage.md"
+    },
+    "technical/building-from-source": {
+      "id": "technical/building-from-source",
+      "title": "Building & Running Locally",
+      "description": "Step-by-step instructions for checking out the source, installing dependencies, and running the dev server.",
+      "section": "Technical & Development",
+      "markdown": "# Building & Running Locally\n\nFold is built with modern web tooling and requires no Java or Python dependencies.\n\n---\n\n## Prerequisites\n- **Node.js:** Version 20.0 or higher (v22 recommended).\n- **npm:** Version 10.0 or higher.\n- **Rust / Cargo:** *(Optional, only required if compiling native Tauri desktop binaries).* \n\n---\n\n## Development Workflow\n\n```bash\n# 1. Clone repository\ngit clone https://github.com/HarryMofoka/Ink.git\ncd Ink\n\n# 2. Install dependencies\nnpm install\n\n# 3. Start development server\nnpm run dev\n```\n\nOpen `http://localhost:5173` in your browser. Changes will hot-reload automatically!\n\n---\n\n## Production Build\n\n```bash\n# Build production bundle\nnpm run build\n```\n\nThe compiled static assets are generated in `dist/` and can be hosted on any static file server or CDN (GitHub Pages, Cloudflare Pages, Netlify, Vercel).",
+      "sourcePath": "docs/technical/building-from-source.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/technical/building-from-source.md"
+    },
+    "technical/keyboard-shortcuts": {
+      "id": "technical/keyboard-shortcuts",
+      "title": "Keyboard Shortcuts Reference",
+      "description": "Quick reference guide for all global, editor canvas, and page grid keyboard shortcuts.",
+      "section": "Technical & Development",
+      "markdown": "# Keyboard Shortcuts Reference\n\nWork faster in Fold using keyboard shortcuts:\n\n---\n\n## Global Shortcuts\n\n| Shortcut | Action |\n| :--- | :--- |\n| Ctrl + O / Cmd + O | Open file selector dialog |\n| Ctrl + S / Cmd + S | Download / Save current document |\n| Ctrl + K / Cmd + K | Open quick search / command palette |\n| Ctrl + Z / Cmd + Z | Undo last action |\n| Ctrl + Shift + Z / Cmd + Shift + Z | Redo undone action |\n\n---\n\n## Canvas & Editor Shortcuts\n\n| Shortcut | Action |\n| :--- | :--- |\n| Ctrl + + / Cmd + + | Zoom in |\n| Ctrl + - / Cmd + - | Zoom out |\n| Ctrl + 0 / Cmd + 0 | Fit to page width |\n| Space + Click & Drag | Pan viewport |\n\n---\n\n## Page Grid Shortcuts\n\n| Shortcut | Action |\n| :--- | :--- |\n| Ctrl + A / Cmd + A | Select all pages |\n| Delete / Backspace | Delete selected page(s) |\n| R | Rotate selected page(s) 90° clockwise |",
+      "sourcePath": "docs/technical/keyboard-shortcuts.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/technical/keyboard-shortcuts.md"
+    },
+    "technical/faq": {
+      "id": "technical/faq",
+      "title": "FAQ & Troubleshooting",
+      "description": "Frequently asked questions regarding file sizes, browser compatibility, and privacy.",
+      "section": "Technical & Development",
+      "markdown": "# FAQ & Troubleshooting\n\n### Q: Are my files uploaded to any server?\n**A:** No. Fold processes 100% of documents directly on your machine inside your browser's WebAssembly sandbox. No document data is ever transmitted across the network.\n\n---\n\n### Q: What is the maximum file size Fold can handle?\n**A:** Because processing happens client-side, Fold is bounded only by your computer's available RAM. In practice, Fold easily handles documents ranging from 1 page to 1,000+ pages (100MB+).\n\n---\n\n### Q: Does Fold work offline?\n**A:** Yes! Once the page is loaded, Fold continues working with complete feature parity even if you disconnect from the internet.\n\n---\n\n### Q: Can I run Fold on mobile devices?\n**A:** Yes. Fold's responsive interface supports touch tablets and smartphones, and also provides a P2P Mobile Camera Scanner to beam photos of paper documents directly into your desktop browser.",
+      "sourcePath": "docs/technical/faq.md",
+      "editUrl": "https://github.com/HarryMofoka/Ink/blob/main/docs/technical/faq.md"
+    }
+  }
+}

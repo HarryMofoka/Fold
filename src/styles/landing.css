@@ -1,0 +1,116 @@
+/* Landing page typography and vintage document decorations */
+.landing-container {
+  font-family: "Inter", sans-serif;
+  background-color: #faf9f6;
+  color: #1e1e1e;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.font-serif {
+  font-family: "Newsreader", "Instrument Serif", Georgia, serif;
+}
+
+.font-hand {
+  font-family: "Caveat", cursive;
+}
+
+.stipple-bg {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 0);
+  background-size: 8px 8px;
+}
+
+.shadow-soft {
+  box-shadow:
+    0 10px 30px -5px rgba(0, 0, 0, 0.05),
+    0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.shadow-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.shadow-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Micro-Animations ─────────────────────────────────────────────────── */
+
+/* 1. Subtle Floating Badge */
+@keyframes floatSubtle {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float {
+  animation: floatSubtle 4s ease-in-out infinite;
+}
+
+/* 2. Pulse Indicator Glow */
+@keyframes pulseDot {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 2.2s infinite;
+}
+
+/* 3. Smooth Fade-in Scale for Mobile Menu */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-menu-open {
+  animation: fadeInScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 4. Shimmer Highlight */
+@keyframes subtleShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: subtleShimmer 3s infinite;
+}
+
+/* 5. Mobile Button Tap Scale */
+.active-press:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}

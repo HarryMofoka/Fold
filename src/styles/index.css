@@ -1,0 +1,130 @@
+@import "./landing.css";
+@import "./theme.css";
+
+/* Frosted glass effect for format picker cards, popovers, dropdown menus, and select cards */
+.frosted-dropdown-card,
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown,
+.mantine-Select-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-Autocomplete-dropdown {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+}
+
+[data-mantine-color-scheme="dark"] .frosted-dropdown-card,
+[data-mantine-color-scheme="dark"] .mantine-Popover-dropdown,
+[data-mantine-color-scheme="dark"] .mantine-Menu-dropdown,
+[data-mantine-color-scheme="dark"] .mantine-Select-dropdown,
+[data-mantine-color-scheme="dark"] .mantine-Combobox-dropdown,
+[data-mantine-color-scheme="dark"] .mantine-Autocomplete-dropdown,
+[data-theme="dark"] .frosted-dropdown-card,
+[data-theme="dark"] .mantine-Popover-dropdown,
+[data-theme="dark"] .mantine-Menu-dropdown,
+[data-theme="dark"] .mantine-Select-dropdown,
+[data-theme="dark"] .mantine-Combobox-dropdown,
+[data-theme="dark"] .mantine-Autocomplete-dropdown {
+  background: rgba(24, 28, 36, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Give the mount node an explicit height so full-height layouts can size against
+   it with percentages. */
+#root {
+  height: 100%;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* Suppress font visibility warnings for PDF.js embedded fonts */
+@font-face {
+  font-family: "Adwaita Mono";
+  src: local("Adwaita Mono");
+  font-display: optional;
+}
+
+@font-face {
+  font-family: "Nimbus Mono PS";
+  src: local("Nimbus Mono PS");
+  font-display: optional;
+}
+
+/* CSS Variables */
+:root {
+  --footer-height: 2rem;
+}
+
+/* Footer link styling - make buttons and links look identical */
+.footer-link {
+  color: var(--mantine-color-gray-6);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+.footer-link:hover {
+  color: var(--mantine-color-blue-8);
+  text-decoration: underline;
+}
+
+.stirling-link {
+  color: var(--c-accent-text);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.stirling-link:hover {
+  color: var(--mantine-color-blue-8);
+  text-decoration: underline;
+}
+
+/* Viewer file tabs */
+.viewer-file-tab {
+  justify-content: flex-start;
+}
+
+.viewer-file-tab[data-active] {
+  background-color: color-mix(
+    in srgb,
+    var(--c-tab-active-tint) 50%,
+    transparent
+  );
+}

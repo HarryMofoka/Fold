@@ -105,7 +105,8 @@ process.exit(publish(findings, scope));
 // touched is how a gate like this gets switched off, so diff runs filter by line.
 
 function resolveScope() {
-  if (flags.has("--all")) return { mode: "all", files: trackedFiles(), added: null };
+  if (flags.has("--all"))
+    return { mode: "all", files: trackedFiles(), added: null };
 
   const paths = positional.map(toRepoPath);
 
@@ -113,7 +114,14 @@ function resolveScope() {
   // only the lines this session actually wrote.
   if (paths.length > 0 && flags.has("--since")) {
     const ref = mergeBase(flagValue("--since"));
-    return narrow(diffScope(["diff", "--unified=0", "--no-color", ref, "--", ...paths], ref, paths), paths);
+    return narrow(
+      diffScope(
+        ["diff", "--unified=0", "--no-color", ref, "--", ...paths],
+        ref,
+        paths,
+      ),
+      paths,
+    );
   }
   if (paths.length > 0) return { mode: "paths", files: paths, added: null };
 
@@ -147,7 +155,9 @@ function diffScope(args, base, paths = null) {
   } catch (error) {
     // A shallow clone, a detached CI checkout, or a base branch that was never
     // fetched. Degrading to report-only beats failing a build over plumbing.
-    warn(`could not resolve a diff (${firstLine(error.stderr ?? error.message)}), so nothing was checked.`);
+    warn(
+      `could not resolve a diff (${firstLine(error.stderr ?? error.message)}), so nothing was checked.`,
+    );
     return { mode: "all", files: [], added: null };
   }
 
@@ -213,14 +223,17 @@ function toRepoPath(path) {
 }
 
 function collect(scope) {
-  const selected = scope.files.map((f) => f.replace(/\\/g, "/")).filter(isLintable);
+  const selected = scope.files
+    .map((f) => f.replace(/\\/g, "/"))
+    .filter(isLintable);
 
   // A path named on the command line and then dropped has to be said out loud.
   // Reporting "clean" for a file this never opened is the failure mode the rest
   // of this script works to avoid.
   if (scope.mode === "paths") {
     for (const file of scope.files) {
-      if (!selected.includes(file.replace(/\\/g, "/"))) warn(`skipped ${file}: not a lintable file inside the repo.`);
+      if (!selected.includes(file.replace(/\\/g, "/")))
+        warn(`skipped ${file}: not a lintable file inside the repo.`);
     }
   }
   const results = [];
@@ -233,7 +246,9 @@ function collect(scope) {
   if (ts.length > 0) results.push(...lintTypeScript(ts));
 
   if (scope.added) {
-    const onAddedLine = results.filter((r) => scope.added.get(r.file)?.has(r.line));
+    const onAddedLine = results.filter((r) =>
+      scope.added.get(r.file)?.has(r.line),
+    );
     return onAddedLine.filter((r) => !existedAtBase(r, scope.base));
   }
   return results;
@@ -269,7 +284,9 @@ function existedAtBase(finding, base) {
 
 function currentLineBody(finding) {
   try {
-    const line = readFileSync(insideRepo(finding.file), "utf8").split(/\r?\n/)[finding.line - 1];
+    const line = readFileSync(insideRepo(finding.file), "utf8").split(/\r?\n/)[
+      finding.line - 1
+    ];
     return line === undefined ? "" : normaliseComment(line);
   } catch {
     return "";
@@ -294,7 +311,8 @@ function isLintable(file) {
   // The corpus is deliberately full of findings. Only the selftest reads it,
   // and it does so by path rather than through this filter.
   if (file.startsWith(FIXTURES_REL)) return false;
-  if (!JAVA.test(file) && !PYTHON.test(file) && !TYPESCRIPT.test(file)) return false;
+  if (!JAVA.test(file) && !PYTHON.test(file) && !TYPESCRIPT.test(file))
+    return false;
   return existsSync(insideRepo(file));
 }
 
@@ -303,7 +321,10 @@ function lintLineBased(file) {
   if (isGenerated(source)) return [];
   const lines = source.split(/\r?\n/);
   const runs = readRuns(lines, PYTHON.test(file) ? "py" : "java");
-  return analyse({ lines, runs, isTestFile: isTestPath(file) }).map((f) => ({ ...f, file }));
+  return analyse({ lines, runs, isTestFile: isTestPath(file) }).map((f) => ({
+    ...f,
+    file,
+  }));
 }
 
 // Groups comment lines into runs, the same shape the oxlint plugin builds from
@@ -317,12 +338,24 @@ function readRuns(lines, language) {
 
   const push = (index, column, body, kind, trailing = false) => {
     const line = index + 1;
-    if (!trailing && current && current.endLine === line - 1 && current.kind === kind && !current.trailing) {
+    if (
+      !trailing &&
+      current &&
+      current.endLine === line - 1 &&
+      current.kind === kind &&
+      !current.trailing
+    ) {
       current.lines.push({ line, column, body });
       current.endLine = line;
       return;
     }
-    current = { startLine: line, endLine: line, kind, trailing, lines: [{ line, column, body }] };
+    current = {
+      startLine: line,
+      endLine: line,
+      kind,
+      trailing,
+      lines: [{ line, column, body }],
+    };
     runs.push(current);
     if (trailing) current = null;
   };
@@ -350,7 +383,8 @@ function readRuns(lines, language) {
       // scanner for the rest of the file, and 35 lines of ordinary code were
       // reported as commented-out.
       if (docstring) {
-        if (docstring.isDoc) push(i, column, stripDocstringDelimiters(raw), "doc");
+        if (docstring.isDoc)
+          push(i, column, stripDocstringDelimiters(raw), "doc");
         else current = null;
         if (raw.includes(docstring.delimiter)) docstring = null;
         continue;
@@ -378,7 +412,12 @@ function readRuns(lines, language) {
       continue;
     }
     if (trimmed.startsWith("/*")) {
-      push(i, column, stripDocPrefix(raw), trimmed.startsWith("/**") ? "doc" : "block");
+      push(
+        i,
+        column,
+        stripDocPrefix(raw),
+        trimmed.startsWith("/**") ? "doc" : "block",
+      );
       if (!trimmed.includes("*/")) inBlock = true;
       continue;
     }
@@ -394,7 +433,11 @@ function readRuns(lines, language) {
     const trailingLine = text.indexOf("//");
     const trailingBlock = text.indexOf("/*");
     const at =
-      trailingLine > 0 ? trailingLine : trailingBlock > 0 && text.includes("*/", trailingBlock) ? trailingBlock : -1;
+      trailingLine > 0
+        ? trailingLine
+        : trailingBlock > 0 && text.includes("*/", trailingBlock)
+          ? trailingBlock
+          : -1;
     if (at > 0) {
       const body = raw
         .slice(at + 2)
@@ -489,7 +532,9 @@ function blankStrings(line, language) {
 
 function lintTypeScript(files) {
   if (!existsSync(join(REPO, OXLINT_BIN))) {
-    warn("frontend/node_modules/oxlint is missing, so TS/TSX was skipped. Run `task frontend:install`.");
+    warn(
+      "frontend/node_modules/oxlint is missing, so TS/TSX was skipped. Run `task frontend:install`.",
+    );
     return [];
   }
   return batch(files, ARGV_BUDGET).flatMap(runOxlint);
@@ -520,17 +565,23 @@ function runOxlint(files) {
     // quoting every path. It must also be the npm package rather than the
     // standalone release binary, which accepts a jsPlugins config, skips loading
     // it, and still reports success (oxc-project/oxc#25203).
-    stdout = execFileSync(process.execPath, [OXLINT_BIN, "--config", OXLINT_CONFIG, "--format=json", ...files], {
-      cwd: REPO,
-      encoding: "utf8",
-      maxBuffer: 1 << 28,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    stdout = execFileSync(
+      process.execPath,
+      [OXLINT_BIN, "--config", OXLINT_CONFIG, "--format=json", ...files],
+      {
+        cwd: REPO,
+        encoding: "utf8",
+        maxBuffer: 1 << 28,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
   } catch (error) {
     // oxlint exits non-zero whenever it reports something, which is the normal case.
     stdout = error.stdout ?? "";
     if (!stdout.trim()) {
-      die(`oxlint failed on ${files.length} file(s): ${firstLine(error.stderr ?? error.message)}`);
+      die(
+        `oxlint failed on ${files.length} file(s): ${firstLine(error.stderr ?? error.message)}`,
+      );
     }
   }
 
@@ -556,7 +607,9 @@ function parseOxlint(stdout) {
   // number_of_rules is the report saying whether the plugin's rule was actually
   // registered. Without this check a dead plugin reads exactly like clean code.
   if ((report.number_of_rules ?? 0) < 1) {
-    die("oxlint loaded no rules, so the comment plugin did not run. Refusing to report a pass.");
+    die(
+      "oxlint loaded no rules, so the comment plugin did not run. Refusing to report a pass.",
+    );
   }
 
   return (report.diagnostics ?? []).flatMap((d) => {
@@ -579,12 +632,16 @@ function parseOxlint(stdout) {
 
 function publish(findings, scope) {
   if (flags.has("--json")) {
-    process.stdout.write(`${JSON.stringify({ mode: scope.mode, findings }, null, 2)}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ mode: scope.mode, findings }, null, 2)}\n`,
+    );
     return 0;
   }
 
   if (findings.length === 0) {
-    process.stdout.write(`comment-lint: clean (${scope.files.length} file${scope.files.length === 1 ? "" : "s"} in scope)\n`);
+    process.stdout.write(
+      `comment-lint: clean (${scope.files.length} file${scope.files.length === 1 ? "" : "s"} in scope)\n`,
+    );
     return 0;
   }
 
@@ -597,7 +654,9 @@ function publish(findings, scope) {
   for (const [file, group] of [...byFile.entries()].sort()) {
     process.stdout.write(`\n${file}\n`);
     for (const f of group.sort((a, b) => a.line - b.line)) {
-      process.stdout.write(`  ${String(f.line).padStart(5)}  ${ruleLabel(f.rule)}  ${f.detail}\n`);
+      process.stdout.write(
+        `  ${String(f.line).padStart(5)}  ${ruleLabel(f.rule)}  ${f.detail}\n`,
+      );
     }
   }
 
@@ -606,7 +665,9 @@ function publish(findings, scope) {
   );
 
   if (scope.mode === "all") {
-    process.stdout.write("Report-only mode: --all never fails, so the standing backlog can be worked through in chunks.\n");
+    process.stdout.write(
+      "Report-only mode: --all never fails, so the standing backlog can be worked through in chunks.\n",
+    );
     return 0;
   }
 
@@ -654,14 +715,18 @@ function runSelfTest() {
     return 1;
   }
 
-  const asRepoPath = (name) => relative(REPO, join(dir, name)).replace(/\\/g, "/");
+  const asRepoPath = (name) =>
+    relative(REPO, join(dir, name)).replace(/\\/g, "/");
   const tsFixtures = files.filter((f) => TYPESCRIPT.test(f));
-  const tsFindings = tsFixtures.length > 0 ? lintTypeScript(tsFixtures.map(asRepoPath)) : [];
+  const tsFindings =
+    tsFixtures.length > 0 ? lintTypeScript(tsFixtures.map(asRepoPath)) : [];
 
   // A skipped engine looks exactly like a clean engine in the snapshot, so
   // refuse to record or compare rather than baking in a false pass.
   if (tsFixtures.length > 0 && tsFindings.length === 0) {
-    warn("the TS engine produced nothing, so it did not run. Install frontend deps first.");
+    warn(
+      "the TS engine produced nothing, so it did not run. Install frontend deps first.",
+    );
     return 1;
   }
 
@@ -684,7 +749,9 @@ function runSelfTest() {
   }
 
   if (!existsSync(expectedPath)) {
-    warn("fixtures/expected.json is missing. Run --selftest --update to record it.");
+    warn(
+      "fixtures/expected.json is missing. Run --selftest --update to record it.",
+    );
     return 1;
   }
 
@@ -697,17 +764,22 @@ function runSelfTest() {
     const want = (expected[name] ?? []).join(" | ");
     const got = actual[name].join(" | ");
     if (want === got) {
-      if (!quiet) process.stdout.write(`ok    ${name} (${actual[name].length})\n`);
+      if (!quiet)
+        process.stdout.write(`ok    ${name} (${actual[name].length})\n`);
       continue;
     }
     failures++;
-    process.stdout.write(`FAIL  ${name}\n        expected: ${want || "(nothing)"}\n        actual:   ${got || "(nothing)"}\n`);
+    process.stdout.write(
+      `FAIL  ${name}\n        expected: ${want || "(nothing)"}\n        actual:   ${got || "(nothing)"}\n`,
+    );
   }
 
   const stale = Object.keys(expected).filter((n) => !files.includes(n));
   for (const name of stale) {
     failures++;
-    process.stdout.write(`FAIL  ${name} is in expected.json but the fixture is gone\n`);
+    process.stdout.write(
+      `FAIL  ${name} is in expected.json but the fixture is gone\n`,
+    );
   }
 
   if (failures > 0) {
@@ -716,7 +788,10 @@ function runSelfTest() {
     );
     return 1;
   }
-  if (!quiet) process.stdout.write("\ncomment-lint selftest: both engines match the corpus\n");
+  if (!quiet)
+    process.stdout.write(
+      "\ncomment-lint selftest: both engines match the corpus\n",
+    );
   return 0;
 }
 

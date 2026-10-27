@@ -46,26 +46,55 @@ function pullRequest({
   };
 }
 
-function label(pr: PullRequest, name: string, daysAgoAdded: number, actor = BOT) {
+function label(
+  pr: PullRequest,
+  name: string,
+  daysAgoAdded: number,
+  actor = BOT,
+) {
   pr.labels.push(name);
-  pr.timeline.push({ __typename: "LabeledEvent", createdAt: daysAgo(daysAgoAdded), label: { name }, actor });
+  pr.timeline.push({
+    __typename: "LabeledEvent",
+    createdAt: daysAgo(daysAgoAdded),
+    label: { name },
+    actor,
+  });
   return pr;
 }
 
-function unlabel(pr: PullRequest, name: string, daysAgoRemoved: number, actor = BOT) {
+function unlabel(
+  pr: PullRequest,
+  name: string,
+  daysAgoRemoved: number,
+  actor = BOT,
+) {
   pr.labels = pr.labels.filter((existing) => existing !== name);
-  pr.timeline.push({ __typename: "UnlabeledEvent", createdAt: daysAgo(daysAgoRemoved), label: { name }, actor });
+  pr.timeline.push({
+    __typename: "UnlabeledEvent",
+    createdAt: daysAgo(daysAgoRemoved),
+    label: { name },
+    actor,
+  });
   return pr;
 }
 
-function happened(pr: PullRequest, typename: "ReopenedEvent" | "ReadyForReviewEvent" | "ConvertToDraftEvent", daysAgoHappened: number) {
-  pr.timeline.push({ __typename: typename, createdAt: daysAgo(daysAgoHappened), actor: PERSON });
+function happened(
+  pr: PullRequest,
+  typename: "ReopenedEvent" | "ReadyForReviewEvent" | "ConvertToDraftEvent",
+  daysAgoHappened: number,
+) {
+  pr.timeline.push({
+    __typename: typename,
+    createdAt: daysAgo(daysAgoHappened),
+    actor: PERSON,
+  });
   return pr;
 }
 
 const decision = (pr: PullRequest) => decide(pr, NOW);
 const actionFor = (pr: PullRequest) => decision(pr).action;
-const conflicted = (daysAgoAdded: number) => label(pullRequest(), LABELS.conflicts, daysAgoAdded);
+const conflicted = (daysAgoAdded: number) =>
+  label(pullRequest(), LABELS.conflicts, daysAgoAdded);
 
 describe("ready PRs", () => {
   it("does nothing without a turn label, however old", () => {
@@ -83,7 +112,11 @@ describe("ready PRs", () => {
   }
 
   it("counts a conflict from when the label was last added", () => {
-    const pr = label(unlabel(conflicted(20), LABELS.conflicts, 10), LABELS.conflicts, 3);
+    const pr = label(
+      unlabel(conflicted(20), LABELS.conflicts, 10),
+      LABELS.conflicts,
+      3,
+    );
     assert.equal(actionFor(pr), "none");
   });
 
@@ -93,7 +126,12 @@ describe("ready PRs", () => {
   });
 
   it("ignores bot-authored PRs", () => {
-    assert.equal(actionFor(label(pullRequest({ authorType: "Bot" }), LABELS.conflicts, 30)), "none");
+    assert.equal(
+      actionFor(
+        label(pullRequest({ authorType: "Bot" }), LABELS.conflicts, 30),
+      ),
+      "none",
+    );
   });
 
   it("ignores PRs on hold", () => {
@@ -101,29 +139,73 @@ describe("ready PRs", () => {
   });
 
   it("gives a full period after Stale PR is removed", () => {
-    assert.equal(actionFor(unlabel(label(conflicted(30), LABELS.stale, 5), LABELS.stale, 3)), "none");
-    assert.equal(actionFor(unlabel(label(conflicted(30), LABELS.stale, 9), LABELS.stale, 7)), "warn");
+    assert.equal(
+      actionFor(
+        unlabel(label(conflicted(30), LABELS.stale, 5), LABELS.stale, 3),
+      ),
+      "none",
+    );
+    assert.equal(
+      actionFor(
+        unlabel(label(conflicted(30), LABELS.stale, 9), LABELS.stale, 7),
+      ),
+      "warn",
+    );
   });
 
   it("counts a turn only from when the PR was last made ready or reopened", () => {
-    assert.equal(actionFor(happened(conflicted(20), "ReadyForReviewEvent", 3)), "none");
-    assert.equal(actionFor(happened(conflicted(20), "ReopenedEvent", 3)), "none");
-    assert.equal(actionFor(happened(conflicted(20), "ReadyForReviewEvent", 8)), "warn");
+    assert.equal(
+      actionFor(happened(conflicted(20), "ReadyForReviewEvent", 3)),
+      "none",
+    );
+    assert.equal(
+      actionFor(happened(conflicted(20), "ReopenedEvent", 3)),
+      "none",
+    );
+    assert.equal(
+      actionFor(happened(conflicted(20), "ReadyForReviewEvent", 8)),
+      "warn",
+    );
   });
 });
 
 describe("Stale PR added by someone else", () => {
   it("is replaced with a warning when one is due", () => {
-    assert.deepEqual(decision(label(conflicted(10), LABELS.stale, 9, PERSON)), { action: "warn", reasons: ["conflicts"] });
+    assert.deepEqual(decision(label(conflicted(10), LABELS.stale, 9, PERSON)), {
+      action: "warn",
+      reasons: ["conflicts"],
+    });
   });
 
   it("is dropped, not acted on, when nothing is due", () => {
-    assert.equal(actionFor(label(pullRequest(), LABELS.stale, 10, PERSON)), "clear");
-    assert.equal(actionFor(label(pullRequest({ isDraft: true, activeDaysAgo: 3 }), LABELS.stale, 10, PERSON)), "clear");
+    assert.equal(
+      actionFor(label(pullRequest(), LABELS.stale, 10, PERSON)),
+      "clear",
+    );
+    assert.equal(
+      actionFor(
+        label(
+          pullRequest({ isDraft: true, activeDaysAgo: 3 }),
+          LABELS.stale,
+          10,
+          PERSON,
+        ),
+      ),
+      "clear",
+    );
   });
 
   it("does not delay the next warning once dropped", () => {
-    assert.equal(actionFor(unlabel(label(conflicted(10), LABELS.stale, 5, PERSON), LABELS.stale, 4)), "warn");
+    assert.equal(
+      actionFor(
+        unlabel(
+          label(conflicted(10), LABELS.stale, 5, PERSON),
+          LABELS.stale,
+          4,
+        ),
+      ),
+      "warn",
+    );
   });
 });
 
@@ -133,41 +215,77 @@ describe("ready PRs after the warning", () => {
   });
 
   it("closes a week after the warning", () => {
-    assert.deepEqual(decision(label(conflicted(20), LABELS.stale, 7)), { action: "close", reasons: ["conflicts"] });
+    assert.deepEqual(decision(label(conflicted(20), LABELS.stale, 7)), {
+      action: "close",
+      reasons: ["conflicts"],
+    });
   });
 
   it("clears once the turn label is removed", () => {
-    assert.equal(actionFor(unlabel(label(conflicted(20), LABELS.stale, 7), LABELS.conflicts, 1)), "clear");
+    assert.equal(
+      actionFor(
+        unlabel(label(conflicted(20), LABELS.stale, 7), LABELS.conflicts, 1),
+      ),
+      "clear",
+    );
   });
 
   it("clears when a conflict is resolved and a new one appears", () => {
-    const pr = label(unlabel(label(conflicted(20), LABELS.stale, 8), LABELS.conflicts, 3), LABELS.conflicts, 2);
+    const pr = label(
+      unlabel(label(conflicted(20), LABELS.stale, 8), LABELS.conflicts, 3),
+      LABELS.conflicts,
+      2,
+    );
     assert.equal(actionFor(pr), "clear");
   });
 
   it("clears when one of two reasons is resolved", () => {
-    const pr = unlabel(label(label(conflicted(20), LABELS.waitingOnAuthor, 20), LABELS.stale, 8), LABELS.waitingOnAuthor, 1);
+    const pr = unlabel(
+      label(label(conflicted(20), LABELS.waitingOnAuthor, 20), LABELS.stale, 8),
+      LABELS.waitingOnAuthor,
+      1,
+    );
     assert.equal(actionFor(pr), "clear");
   });
 
   it("closes only for the reasons that were outstanding when it warned", () => {
-    const pr = label(label(conflicted(20), LABELS.stale, 8), LABELS.waitingOnAuthor, 2);
+    const pr = label(
+      label(conflicted(20), LABELS.stale, 8),
+      LABELS.waitingOnAuthor,
+      2,
+    );
     assert.deepEqual(decision(pr), { action: "close", reasons: ["conflicts"] });
   });
 
   it("closes only for the reasons that were due when it warned", () => {
-    const pr = label(label(conflicted(16), LABELS.waitingOnAuthor, 9), LABELS.stale, 7);
+    const pr = label(
+      label(conflicted(16), LABELS.waitingOnAuthor, 9),
+      LABELS.stale,
+      7,
+    );
     assert.deepEqual(decision(pr), { action: "close", reasons: ["conflicts"] });
   });
 
   it("finishes a close that stopped partway, and not one a maintainer reopened", () => {
-    const interrupted = () => label(label(conflicted(40), LABELS.stale, 8), LABELS.backlogCleanup, 1);
-    assert.deepEqual(decision(interrupted()), { action: "resume", reasons: [] });
-    assert.equal(actionFor(happened(interrupted(), "ReopenedEvent", 0.5)), "clear");
+    const interrupted = () =>
+      label(label(conflicted(40), LABELS.stale, 8), LABELS.backlogCleanup, 1);
+    assert.deepEqual(decision(interrupted()), {
+      action: "resume",
+      reasons: [],
+    });
+    assert.equal(
+      actionFor(happened(interrupted(), "ReopenedEvent", 0.5)),
+      "clear",
+    );
   });
 
   it("clears on a reopened PR rather than closing it again", () => {
-    assert.equal(actionFor(happened(label(conflicted(40), LABELS.stale, 20), "ReopenedEvent", 1)), "clear");
+    assert.equal(
+      actionFor(
+        happened(label(conflicted(40), LABELS.stale, 20), "ReopenedEvent", 1),
+      ),
+      "clear",
+    );
   });
 
   it("clears when it went to draft and back since the warning", () => {
@@ -178,15 +296,24 @@ describe("ready PRs after the warning", () => {
   });
 
   it("clears when it is put on hold", () => {
-    assert.equal(actionFor(label(label(conflicted(20), LABELS.stale, 8), LABELS.onHold, 1)), "clear");
+    assert.equal(
+      actionFor(
+        label(label(conflicted(20), LABELS.stale, 8), LABELS.onHold, 1),
+      ),
+      "clear",
+    );
   });
 });
 
 describe("drafts", () => {
-  const draft = (activeDaysAgo: number) => pullRequest({ isDraft: true, activeDaysAgo });
+  const draft = (activeDaysAgo: number) =>
+    pullRequest({ isDraft: true, activeDaysAgo });
 
   it("warns once nothing has touched it for 30 days", () => {
-    assert.deepEqual(decision(draft(30)), { action: "warn", reasons: ["idleDraft"] });
+    assert.deepEqual(decision(draft(30)), {
+      action: "warn",
+      reasons: ["idleDraft"],
+    });
   });
 
   it("waits before 30 days", () => {
@@ -202,7 +329,10 @@ describe("drafts", () => {
   });
 
   it("closes a week after the warning if still untouched", () => {
-    assert.deepEqual(decision(label(draft(37), LABELS.stale, 7)), { action: "close", reasons: ["idleDraft"] });
+    assert.deepEqual(decision(label(draft(37), LABELS.stale, 7)), {
+      action: "close",
+      reasons: ["idleDraft"],
+    });
   });
 
   it("clears once something touches it after the warning", () => {
@@ -216,31 +346,56 @@ describe("drafts", () => {
   });
 
   it("clears a draft warning once the PR is marked ready", () => {
-    const pr = label(label(pullRequest(), LABELS.conflicts, 40), LABELS.stale, 8);
+    const pr = label(
+      label(pullRequest(), LABELS.conflicts, 40),
+      LABELS.stale,
+      8,
+    );
     happened(pr, "ReadyForReviewEvent", 1);
     assert.equal(actionFor(pr), "clear");
   });
 });
 
 describe("comments", () => {
-  const pr = label(label(pullRequest(), LABELS.conflicts, 9), LABELS.waitingOnAuthor, 8);
+  const pr = label(
+    label(pullRequest(), LABELS.conflicts, 9),
+    LABELS.waitingOnAuthor,
+    8,
+  );
   const reasons = decision(pr).reasons;
 
   it("tells the author every reason and how to fix it", () => {
     const body = warningComment(pr, reasons, NOW);
     assert.match(body, /@contributor/);
     assert.match(body, /merge conflicts with `main`\. Merging or rebasing/);
-    assert.match(body, /waiting on a response from you\. Please add a comment, a new push/);
+    assert.match(
+      body,
+      /waiting on a response from you\. Please add a comment, a new push/,
+    );
     assert.match(body, /closed automatically/);
     assert.match(body, /just add a comment so a maintainer can take a look/);
   });
 
   it("says how long a draft has been idle", () => {
-    assert.match(warningComment(pullRequest({ isDraft: true, activeDaysAgo: 31 }), ["idleDraft"], NOW), /for 31 days/);
+    assert.match(
+      warningComment(
+        pullRequest({ isDraft: true, activeDaysAgo: 31 }),
+        ["idleDraft"],
+        NOW,
+      ),
+      /for 31 days/,
+    );
   });
 
   it("says how long a closed draft was idle", () => {
-    assert.match(closingComment(pullRequest({ isDraft: true, activeDaysAgo: 37 }), ["idleDraft"], NOW), /for 37 days/);
+    assert.match(
+      closingComment(
+        pullRequest({ isDraft: true, activeDaysAgo: 37 }),
+        ["idleDraft"],
+        NOW,
+      ),
+      /for 37 days/,
+    );
   });
 
   it("explains the close and how to reopen", () => {
@@ -251,27 +406,46 @@ describe("comments", () => {
   });
 
   it("stays ASCII", () => {
-    for (const body of [warningComment(pr, reasons, NOW), closingComment(pr, reasons, NOW)]) {
+    for (const body of [
+      warningComment(pr, reasons, NOW),
+      closingComment(pr, reasons, NOW),
+    ]) {
       assert.match(body, /^[\x20-\x7E\n]*$/);
     }
   });
 });
 
 describe("latest activity", () => {
-  const node = (activity: PullRequestNode["activity"]["nodes"], committedDaysAgo = 50): PullRequestNode => ({
+  const node = (
+    activity: PullRequestNode["activity"]["nodes"],
+    committedDaysAgo = 50,
+  ): PullRequestNode => ({
     ...toNode(pullRequest({ activeDaysAgo: 60 }), 100, null),
-    commits: { nodes: [{ commit: { committedDate: daysAgo(committedDaysAgo) } }] },
+    commits: {
+      nodes: [{ commit: { committedDate: daysAgo(committedDaysAgo) } }],
+    },
     activity: { nodes: activity },
   });
-  const commentBy = (author: Actor, ago: number) => ({ __typename: "IssueComment" as const, createdAt: daysAgo(ago), author });
+  const commentBy = (author: Actor, ago: number) => ({
+    __typename: "IssueComment" as const,
+    createdAt: daysAgo(ago),
+    author,
+  });
 
   it("counts people, not bots", () => {
-    assert.equal(latestActivity(node([commentBy(PERSON, 40), commentBy(BOT, 1)]), []), daysAgo(40));
+    assert.equal(
+      latestActivity(node([commentBy(PERSON, 40), commentBy(BOT, 1)]), []),
+      daysAgo(40),
+    );
   });
 
   it("counts a push from its newest commit, and force pushes", () => {
     assert.equal(latestActivity(node([], 20), []), daysAgo(20));
-    const forcePush = { __typename: "HeadRefForcePushedEvent" as const, createdAt: daysAgo(10), actor: PERSON };
+    const forcePush = {
+      __typename: "HeadRefForcePushedEvent" as const,
+      createdAt: daysAgo(10),
+      actor: PERSON,
+    };
     assert.equal(latestActivity(node([forcePush]), []), daysAgo(10));
   });
 
@@ -281,13 +455,21 @@ describe("latest activity", () => {
   });
 
   it("skips a review still pending", () => {
-    const pending = { __typename: "PullRequestReview" as const, submittedAt: null, author: PERSON };
+    const pending = {
+      __typename: "PullRequestReview" as const,
+      submittedAt: null,
+      author: PERSON,
+    };
     assert.equal(latestActivity(node([pending]), []), daysAgo(50));
   });
 });
 
 // The cursor is the index of the page's first event, so `before` slices the timeline.
-function toNode(pr: PullRequest, pageSize: number, before: string | null): PullRequestNode {
+function toNode(
+  pr: PullRequest,
+  pageSize: number,
+  before: string | null,
+): PullRequestNode {
   const end = before === null ? pr.timeline.length : Number(before);
   const start = Math.max(0, end - pageSize);
   return {
@@ -310,7 +492,13 @@ function toNode(pr: PullRequest, pageSize: number, before: string | null): PullR
 
 type TurnItem = ReviewNode | TimelineItem;
 
-const STILL_WAITING: TurnItem[] = [{ __typename: "LabeledEvent", createdAt: daysAgo(40), label: { name: LABELS.waitingOnAuthor } }];
+const STILL_WAITING: TurnItem[] = [
+  {
+    __typename: "LabeledEvent",
+    createdAt: daysAgo(40),
+    label: { name: LABELS.waitingOnAuthor },
+  },
+];
 
 interface FakeOptions {
   /** What pulls.get reports for mergeable. */
@@ -341,44 +529,96 @@ function fakeGitHub(
   const writeTimes: number[] = [];
   const reads = { mergeable: 0, pages: 0 };
   const write = (call: string) => {
-    if (failWrite !== undefined && call.startsWith(failWrite)) throw new Error(`${failWrite} failed`);
+    if (failWrite !== undefined && call.startsWith(failWrite))
+      throw new Error(`${failWrite} failed`);
     calls.push(call);
     writeTimes.push(Date.now());
   };
   const graphql = async (query: string, variables: Record<string, unknown>) => {
     if (query.includes("pullRequests(states: OPEN")) {
       const nodes = prs.map((pr) => ({ number: pr.number }));
-      return { repository: { pullRequests: { pageInfo: { hasNextPage: false, endCursor: null }, nodes } } };
+      return {
+        repository: {
+          pullRequests: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes,
+          },
+        },
+      };
     }
     if (query.includes("reviews(last")) {
-      const reviews = { nodes: turnItems.filter((item) => item.__typename === "PullRequestReview") };
-      return { repository: { pullRequest: { author: { login: "contributor" }, headRefOid: "head-sha", reviews } } };
+      const reviews = {
+        nodes: turnItems.filter(
+          (item) => item.__typename === "PullRequestReview",
+        ),
+      };
+      return {
+        repository: {
+          pullRequest: {
+            author: { login: "contributor" },
+            headRefOid: "head-sha",
+            reviews,
+          },
+        },
+      };
     }
     if (query.includes("REVIEW_DISMISSED_EVENT")) {
-      const nodes = turnItems.filter((item) => item.__typename !== "PullRequestReview");
-      return { repository: { pullRequest: { timelineItems: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes } } } };
+      const nodes = turnItems.filter(
+        (item) => item.__typename !== "PullRequestReview",
+      );
+      return {
+        repository: {
+          pullRequest: {
+            timelineItems: {
+              pageInfo: { hasPreviousPage: false, startCursor: null },
+              nodes,
+            },
+          },
+        },
+      };
     }
     if (variables.number === failFor) throw new Error("boom");
     reads.pages += 1;
     const pr = prs.find((candidate) => candidate.number === variables.number);
     assert.ok(pr);
-    return { repository: { pullRequest: toNode(pr, timelinePageSize, (variables.before as string | null) ?? null) } };
+    return {
+      repository: {
+        pullRequest: toNode(
+          pr,
+          timelinePageSize,
+          (variables.before as string | null) ?? null,
+        ),
+      },
+    };
   };
   const github: GitHubClient = {
-    graphql: async <T>(query: string, variables: Record<string, unknown>) => (await graphql(query, variables)) as T,
+    graphql: async <T>(query: string, variables: Record<string, unknown>) =>
+      (await graphql(query, variables)) as T,
     rest: {
       issues: {
-        createComment: async ({ issue_number }) => write(`comment #${issue_number}`),
-        addLabels: async ({ issue_number, labels }) => write(`label #${issue_number} ${labels.join(",")}`),
+        createComment: async ({ issue_number }) =>
+          write(`comment #${issue_number}`),
+        addLabels: async ({ issue_number, labels }) =>
+          write(`label #${issue_number} ${labels.join(",")}`),
         removeLabel: async ({ issue_number, name }) => {
-          if (alreadyRemoved.includes(name)) throw Object.assign(new Error("Label does not exist"), { status: 404 });
+          if (alreadyRemoved.includes(name))
+            throw Object.assign(new Error("Label does not exist"), {
+              status: 404,
+            });
           write(`unlabel #${issue_number} ${name}`);
         },
       },
       pulls: {
         get: async () => {
           reads.mergeable += 1;
-          return { data: { mergeable, mergeable_state: mergeableState, labels: [], head: { ref: "feature", repo: null } } };
+          return {
+            data: {
+              mergeable,
+              mergeable_state: mergeableState,
+              labels: [],
+              head: { ref: "feature", repo: null },
+            },
+          };
         },
         update: async ({ pull_number }) => write(`close #${pull_number}`),
       },
@@ -404,11 +644,19 @@ function recordingCore() {
       return summary;
     },
   };
-  const core: Core = { info: () => {}, error: (message) => errors.push(message), setFailed: (message) => failed.push(message), summary };
+  const core: Core = {
+    info: () => {},
+    error: (message) => errors.push(message),
+    setFailed: (message) => failed.push(message),
+    summary,
+  };
   return { core, errors, failed, tables, summaries: () => summaries };
 }
 
-async function triage(github: GitHubClient, { live = true, writeIntervalMs = 0 } = {}) {
+async function triage(
+  github: GitHubClient,
+  { live = true, writeIntervalMs = 0 } = {},
+) {
   const recorded = recordingCore();
   await triageStalePullRequests({
     github,
@@ -432,20 +680,32 @@ describe("triage run", () => {
   });
 
   it("warns over a Stale PR label someone else added, replacing it with its own", async () => {
-    const { github, calls } = fakeGitHub([label(conflicted(10), LABELS.stale, 9, PERSON)]);
+    const { github, calls } = fakeGitHub([
+      label(conflicted(10), LABELS.stale, 9, PERSON),
+    ]);
     await triage(github);
-    assert.deepEqual(calls, ["comment #1", "unlabel #1 Stale PR", "label #1 Stale PR"]);
+    assert.deepEqual(calls, [
+      "comment #1",
+      "unlabel #1 Stale PR",
+      "label #1 Stale PR",
+    ]);
   });
 
   it("closes: comments, labels it backlog-cleanup, then closes", async () => {
     const { github, calls } = fakeGitHub([overdue()]);
     const { errors } = await triage(github);
     assert.deepEqual(errors, []);
-    assert.deepEqual(calls, ["comment #1", "label #1 backlog-cleanup", "close #1"]);
+    assert.deepEqual(calls, [
+      "comment #1",
+      "label #1 backlog-cleanup",
+      "close #1",
+    ]);
   });
 
   it("finishes a close that stopped partway without commenting again", async () => {
-    const { github, calls } = fakeGitHub([label(overdue(), LABELS.backlogCleanup, 1)]);
+    const { github, calls } = fakeGitHub([
+      label(overdue(), LABELS.backlogCleanup, 1),
+    ]);
     await triage(github);
     assert.deepEqual(calls, ["close #1"]);
   });
@@ -463,27 +723,44 @@ describe("triage run", () => {
   });
 
   it("counts a conflict only when GitHub calls it dirty, as the labeler does", async () => {
-    const { github, calls } = fakeGitHub([conflicted(10)], { mergeable: false, mergeableState: "blocked" });
+    const { github, calls } = fakeGitHub([conflicted(10)], {
+      mergeable: false,
+      mergeableState: "blocked",
+    });
     await triage(github);
     assert.deepEqual(calls, []);
   });
 
   it("does not close while GitHub cannot say whether it conflicts", async () => {
-    const { github, calls, reads } = fakeGitHub([overdue()], { mergeable: null });
+    const { github, calls, reads } = fakeGitHub([overdue()], {
+      mergeable: null,
+    });
     await triage(github);
     assert.equal(reads.mergeable, 7);
     assert.deepEqual(calls, []);
   });
 
   it("still closes for another reason when the conflict is gone", async () => {
-    const pr = label(label(conflicted(40), LABELS.waitingOnAuthor, 40), LABELS.stale, 30);
+    const pr = label(
+      label(conflicted(40), LABELS.waitingOnAuthor, 40),
+      LABELS.stale,
+      30,
+    );
     const { github, calls } = fakeGitHub([pr], { mergeable: true });
     await triage(github);
-    assert.deepEqual(calls, ["comment #1", "label #1 backlog-cleanup", "close #1"]);
+    assert.deepEqual(calls, [
+      "comment #1",
+      "label #1 backlog-cleanup",
+      "close #1",
+    ]);
   });
 
   it("drops a waiting-on-author the author already answered, which ends the warning", async () => {
-    const pr = label(label(pullRequest(), LABELS.waitingOnAuthor, 40), LABELS.stale, 30);
+    const pr = label(
+      label(pullRequest(), LABELS.waitingOnAuthor, 40),
+      LABELS.stale,
+      30,
+    );
     const reply: TurnItem = {
       __typename: "PullRequestReview",
       submittedAt: daysAgo(31),
@@ -492,9 +769,14 @@ describe("triage run", () => {
       author: { login: "contributor", __typename: "User" },
       commit: { oid: "head-sha" },
     };
-    const { github, calls } = fakeGitHub([pr], { turnItems: [...STILL_WAITING, reply] });
+    const { github, calls } = fakeGitHub([pr], {
+      turnItems: [...STILL_WAITING, reply],
+    });
     await triage(github);
-    assert.deepEqual(calls, ["unlabel #1 waiting-on-author", "unlabel #1 Stale PR"]);
+    assert.deepEqual(calls, [
+      "unlabel #1 waiting-on-author",
+      "unlabel #1 Stale PR",
+    ]);
   });
 
   it("reads a timeline longer than one page", async () => {
@@ -507,7 +789,11 @@ describe("triage run", () => {
   });
 
   it("does not fail when the label it clears is already gone", async () => {
-    const pr = unlabel(label(conflicted(20), LABELS.stale, 7), LABELS.conflicts, 1);
+    const pr = unlabel(
+      label(conflicted(20), LABELS.stale, 7),
+      LABELS.conflicts,
+      1,
+    );
     pr.labels.push(LABELS.stale);
     const { github } = fakeGitHub([pr], { alreadyRemoved: [LABELS.stale] });
     const { errors, failed } = await triage(github);
@@ -515,7 +801,10 @@ describe("triage run", () => {
   });
 
   it("carries on past a PR that cannot be read, and still writes the summary", async () => {
-    const { github, calls } = fakeGitHub([conflicted(10), label(pullRequest({ number: 2 }), LABELS.conflicts, 10)], { failFor: 1 });
+    const { github, calls } = fakeGitHub(
+      [conflicted(10), label(pullRequest({ number: 2 }), LABELS.conflicts, 10)],
+      { failFor: 1 },
+    );
     const { errors, failed, summaries } = await triage(github);
     assert.deepEqual(calls, ["comment #2", "label #2 Stale PR"]);
     assert.deepEqual(errors, ["#1: boom"]);

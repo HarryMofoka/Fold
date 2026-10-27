@@ -1,0 +1,7 @@
+<svg width="186" height="142" viewBox="0 0 186 142" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(63, 10)">
+    <path d="M30 4L8 16.5v25l22 12.5 22-12.5v-25L30 4zm0 5.5l15.5 8.7L30 27 14.5 18.2 30 9.5zm-16.2 13.2l13.7 8.5v18l-13.7-7.8V22.7zm18.7 26.5v-18l13.7-8.5v17.5l-13.7 9z" fill="#FAF9F6"/>
+  </g>
+  <text x="93" y="112" font-family="'Newsreader', Georgia, serif" font-weight="600" font-size="32" letter-spacing="-0.03em" fill="#FAF9F6" text-anchor="middle">Fold</text>
+  <text x="93" y="132" font-family="'Inter', sans-serif" font-weight="400" font-size="12" fill="#A8A29E" text-anchor="middle">Your PDFs. Still yours.</text>
+</svg>

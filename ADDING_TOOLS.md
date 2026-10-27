@@ -1,4 +1,4 @@
-# Adding New React Tools to Stirling PDF
+# Adding New React Tools to Fold
 
 This guide covers how to add new PDF tools to the React frontend.
 
@@ -275,19 +275,19 @@ Update translation files. **Important: Only update `en-US` files** - other langu
 
 ## Tool Development Patterns
 
-### Three Tool Patterns:
+### Tool Patterns:
 
-**Pattern 1: Single-File Tools** (Individual processing)
-- Backend processes one file per API call
+**Pattern 1: Client-Side Single-File Tools** (In-browser processing)
+- Executes directly in-browser using `@cantoo/pdf-lib` via `clientPdfEngine`
 - Set `multiFileEndpoint: false`
-- Examples: Compress, Rotate
+- Examples: Compress, Rotate, AddPassword
 
-**Pattern 2: Multi-File Tools** (Batch processing)
-- Backend accepts `MultipartFile[]` arrays in single API call
+**Pattern 2: Client-Side Multi-File Tools** (Batch in-browser processing)
+- Combines or processes multiple files locally
 - Set `multiFileEndpoint: true`
-- Examples: Split, Merge, Overlay
+- Examples: Split, Merge
 
 **Pattern 3: Complex Tools** (Custom processing)
-- Tools with complex routing logic or non-standard processing
+- Tools with complex routing logic or client-side transformers
 - Provide `customProcessor` for full control
-- Examples: Convert, OCR
+- Examples: Multi-page layout, Crop, Reorder

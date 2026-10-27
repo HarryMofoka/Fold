@@ -39,7 +39,8 @@ const OFF = new Set(["0", "off", "false", "no"]);
 const FOUND = 1;
 const ENGINE_BROKEN = 2;
 
-if (OFF.has((process.env.COMMENT_LINT_HOOK ?? "").toLowerCase())) process.exit(0);
+if (OFF.has((process.env.COMMENT_LINT_HOOK ?? "").toLowerCase()))
+  process.exit(0);
 
 const payload = readStdin();
 
@@ -54,7 +55,9 @@ const result = run();
 if (result.status === 0) process.exit(0);
 
 if (result.status === ENGINE_BROKEN) {
-  process.stderr.write(`comment-lint could not run, so comments in this turn were not checked.${reason(result)}\n`);
+  process.stderr.write(
+    `comment-lint could not run, so comments in this turn were not checked.${reason(result)}\n`,
+  );
   process.exit(1);
 }
 
@@ -62,13 +65,17 @@ if (result.status === ENGINE_BROKEN) {
 // findings exit carrying no findings is the same case: Task failed before the
 // linter ran, so blocking on it would name comments nobody can go and read.
 if (result.status !== FOUND || !result.output.trim()) {
-  process.stderr.write(`comment-lint did not run (task exit ${result.status}), so comments in this turn were not checked.${reason(result)}\n`);
+  process.stderr.write(
+    `comment-lint did not run (task exit ${result.status}), so comments in this turn were not checked.${reason(result)}\n`,
+  );
   process.exit(1);
 }
 
 // The linter's own report already names the file, line, rule and the standard, so
 // it is passed through rather than rewritten.
-process.stderr.write(`${result.output.trim()}\n\nFix these before finishing.\n`);
+process.stderr.write(
+  `${result.output.trim()}\n\nFix these before finishing.\n`,
+);
 process.exit(2);
 
 // Task's stderr names the real failure, such as an executable missing from PATH,
@@ -116,15 +123,23 @@ function run() {
     // Task's stderr is captured rather than inherited: it announces its own
     // "Failed to run task" for any non-zero command, which would reach Claude
     // alongside the findings and read as a tooling error.
-    const output = execFileSync(command, [TASK_NAME, "--silent", "--output=interleaved", "--exit-code"], {
-      cwd: REPO,
-      encoding: "utf8",
-      maxBuffer: 1 << 26,
-      shell,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const output = execFileSync(
+      command,
+      [TASK_NAME, "--silent", "--output=interleaved", "--exit-code"],
+      {
+        cwd: REPO,
+        encoding: "utf8",
+        maxBuffer: 1 << 26,
+        shell,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
     return { status: 0, output };
   } catch (error) {
-    return { status: error.status ?? -1, output: error.stdout ?? "", error: error.stderr ?? "" };
+    return {
+      status: error.status ?? -1,
+      output: error.stdout ?? "",
+      error: error.stderr ?? "",
+    };
   }
 }

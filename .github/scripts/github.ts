@@ -36,7 +36,9 @@ export interface GitHubClient {
     };
     pulls: {
       get(params: Repo & { pull_number: number }): Promise<{ data: PullData }>;
-      update(params: Repo & { pull_number: number; state: "closed" }): Promise<unknown>;
+      update(
+        params: Repo & { pull_number: number; state: "closed" },
+      ): Promise<unknown>;
     };
   };
 }
@@ -59,11 +61,20 @@ export interface Core {
 }
 
 export const isNotFound = (error: unknown) =>
-  typeof error === "object" && error !== null && "status" in error && error.status === 404;
+  typeof error === "object" &&
+  error !== null &&
+  "status" in error &&
+  error.status === 404;
 
 /** Removes a label, treating one that is already gone as removed. */
-export async function removeLabel(github: GitHubClient, issue: IssueRef, name: string) {
-  await github.rest.issues.removeLabel({ ...issue, name }).catch((error: unknown) => {
-    if (!isNotFound(error)) throw error;
-  });
+export async function removeLabel(
+  github: GitHubClient,
+  issue: IssueRef,
+  name: string,
+) {
+  await github.rest.issues
+    .removeLabel({ ...issue, name })
+    .catch((error: unknown) => {
+      if (!isNotFound(error)) throw error;
+    });
 }

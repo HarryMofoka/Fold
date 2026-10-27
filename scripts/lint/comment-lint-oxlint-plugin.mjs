@@ -12,7 +12,13 @@
 // Enabled by frontend/oxlint.comments.config.ts. `context.report` needs
 // `node.range`; passing start/end throws.
 
-import { analyse, isTestPath, isGenerated, isExcludedPath, ruleLabel } from "./comment-rules.mjs";
+import {
+  analyse,
+  isTestPath,
+  isGenerated,
+  isExcludedPath,
+  ruleLabel,
+} from "./comment-rules.mjs";
 
 const comments = {
   create(context) {
@@ -30,7 +36,11 @@ const comments = {
         if (tokens.length === 0) return;
 
         const runs = groupIntoRuns(tokens, lines);
-        const findings = analyse({ lines, runs, isTestFile: isTestPath(filename) });
+        const findings = analyse({
+          lines,
+          runs,
+          isTestFile: isTestPath(filename),
+        });
 
         // Ranges come from the run entries rather than the enclosing token, so a
         // finding on the eighth line of a doc block points at that line instead
@@ -62,17 +72,33 @@ function groupIntoRuns(tokens, lines) {
     const entries = expand(token, lines);
     if (entries.length === 0) continue;
 
-    const kind = token.type === "Line" ? "line" : token.value.startsWith("*") ? "doc" : "block";
+    const kind =
+      token.type === "Line"
+        ? "line"
+        : token.value.startsWith("*")
+          ? "doc"
+          : "block";
     const startLine = entries[0].line;
     const trailing = entries[0].trailing === true;
-    const contiguous = !trailing && current && startLine === current.endLine + 1 && current.kind === kind && !current.trailing;
+    const contiguous =
+      !trailing &&
+      current &&
+      startLine === current.endLine + 1 &&
+      current.kind === kind &&
+      !current.trailing;
 
     if (contiguous) {
       current.lines.push(...entries);
       current.endLine = entries[entries.length - 1].line;
       continue;
     }
-    current = { startLine, endLine: entries[entries.length - 1].line, kind, trailing, lines: entries };
+    current = {
+      startLine,
+      endLine: entries[entries.length - 1].line,
+      kind,
+      trailing,
+      lines: entries,
+    };
     runs.push(current);
 
     // Code sits in front of a trailing comment, so nothing can continue it.
@@ -88,7 +114,9 @@ function groupIntoRuns(tokens, lines) {
 function expand(token, lines) {
   const start = token.loc.start.line;
   const column = token.loc.start.column + 1;
-  const before = (lines[start - 1] ?? "").slice(0, token.loc.start.column).trim();
+  const before = (lines[start - 1] ?? "")
+    .slice(0, token.loc.start.column)
+    .trim();
 
   // Code in front of the comment makes it a trailing note. Marked rather than
   // dropped, so CMT004 and CMT009 still see it: a TODO is a TODO wherever it
@@ -99,10 +127,15 @@ function expand(token, lines) {
   // One that runs on has its bulk on lines of its own, so it is judged as the
   // block it is.
   const sameLine = token.loc.start.line === token.loc.end.line;
-  const trailing = before.length > 0 && !before.startsWith("{") && (token.type === "Line" || sameLine);
+  const trailing =
+    before.length > 0 &&
+    !before.startsWith("{") &&
+    (token.type === "Line" || sameLine);
 
   if (token.type === "Line") {
-    return [{ line: start, column, body: token.value, range: token.range, trailing }];
+    return [
+      { line: start, column, body: token.value, range: token.range, trailing },
+    ];
   }
 
   // token.value is the text between the delimiters, so it begins two chars in.

@@ -8,7 +8,16 @@
 // re-requests review or marks the PR ready, when someone who can push approves, when a
 // changes-requested review is dismissed, or when the label is removed.
 
-import { type Core, type GitHubClient, type IssueRef, isNotFound, LABELS, type PullData, type Repo, removeLabel } from "./github.ts";
+import {
+  type Core,
+  type GitHubClient,
+  type IssueRef,
+  isNotFound,
+  LABELS,
+  type PullData,
+  type Repo,
+  removeLabel,
+} from "./github.ts";
 
 /** The parts of a github-script `context.payload` the turn events carry. */
 export interface TurnPayload {
@@ -16,7 +25,12 @@ export interface TurnPayload {
   pull_request?: { number: number; user: { login: string } };
   issue?: { number: number; user: { login: string }; pull_request?: unknown };
   comment?: { user: { login: string } };
-  workflow_run?: { event: string; display_title: string; head_branch: string; head_repository: { full_name: string } };
+  workflow_run?: {
+    event: string;
+    display_title: string;
+    head_branch: string;
+    head_repository: { full_name: string };
+  };
 }
 
 export interface TurnChange {
@@ -84,13 +98,29 @@ export interface ReviewNode {
 /** One timeline item as TIMELINE_QUERY returns it: must stay in sync with the query. */
 export type TimelineItem =
   | { __typename: "IssueComment"; createdAt: string; author: Login }
-  | { __typename: "ReviewRequestedEvent" | "ReadyForReviewEvent"; createdAt: string; actor: Login }
-  | { __typename: "ReviewDismissedEvent"; createdAt: string; previousReviewState: string }
-  | { __typename: "LabeledEvent" | "UnlabeledEvent"; createdAt: string; label: { name: string } };
+  | {
+      __typename: "ReviewRequestedEvent" | "ReadyForReviewEvent";
+      createdAt: string;
+      actor: Login;
+    }
+  | {
+      __typename: "ReviewDismissedEvent";
+      createdAt: string;
+      previousReviewState: string;
+    }
+  | {
+      __typename: "LabeledEvent" | "UnlabeledEvent";
+      createdAt: string;
+      label: { name: string };
+    };
 
 export interface ReviewsPage {
   repository: {
-    pullRequest: { author: Login; headRefOid: string; reviews: { nodes: ReviewNode[] } } | null;
+    pullRequest: {
+      author: Login;
+      headRefOid: string;
+      reviews: { nodes: ReviewNode[] };
+    } | null;
   };
 }
 
@@ -112,19 +142,30 @@ interface TurnMove {
   turn: Turn;
 }
 
-const isBy = (actor: Login, author: string | undefined) => actor !== null && actor.login === author;
+const isBy = (actor: Login, author: string | undefined) =>
+  actor !== null && actor.login === author;
 
-function reviewTurn(review: ReviewNode, author: string | undefined, headOid: string): Turn | null {
+function reviewTurn(
+  review: ReviewNode,
+  author: string | undefined,
+  headOid: string,
+): Turn | null {
   if (isBy(review.author, author)) return "maintainers";
   // Review bots can have push access, but only a person's verdict moves the turn.
-  if (review.author?.__typename === "Bot" || !review.authorCanPushToRepository) return null;
+  if (review.author?.__typename === "Bot" || !review.authorCanPushToRepository)
+    return null;
   if (review.state === "APPROVED") return "maintainers";
   // A push has no time to compare against, so one since the review shows as the review
   // being of an older commit.
-  return review.state === "CHANGES_REQUESTED" && review.commit?.oid === headOid ? "author" : null;
+  return review.state === "CHANGES_REQUESTED" && review.commit?.oid === headOid
+    ? "author"
+    : null;
 }
 
-function timelineTurn(item: TimelineItem, author: string | undefined): Turn | null {
+function timelineTurn(
+  item: TimelineItem,
+  author: string | undefined,
+): Turn | null {
   const isAuthor = (actor: Login) => isBy(actor, author);
   switch (item.__typename) {
     case "IssueComment":
@@ -133,7 +174,9 @@ function timelineTurn(item: TimelineItem, author: string | undefined): Turn | nu
     case "ReadyForReviewEvent":
       return isAuthor(item.actor) ? "maintainers" : null;
     case "ReviewDismissedEvent":
-      return item.previousReviewState === "CHANGES_REQUESTED" ? "maintainers" : null;
+      return item.previousReviewState === "CHANGES_REQUESTED"
+        ? "maintainers"
+        : null;
     case "LabeledEvent":
     case "UnlabeledEvent":
       if (item.label.name !== LABELS.waitingOnAuthor) return null;
@@ -141,19 +184,37 @@ function timelineTurn(item: TimelineItem, author: string | undefined): Turn | nu
   }
 }
 
-const move = (at: string | null, turn: Turn | null): TurnMove[] => (at === null || turn === null ? [] : [{ at: Date.parse(at), turn }]);
+const move = (at: string | null, turn: Turn | null): TurnMove[] =>
+  at === null || turn === null ? [] : [{ at: Date.parse(at), turn }];
 
 const latestMove = (moves: TurnMove[]) =>
-  moves.reduce<TurnMove | null>((latest, candidate) => (latest === null || candidate.at >= latest.at ? candidate : latest), null);
+  moves.reduce<TurnMove | null>(
+    (latest, candidate) =>
+      latest === null || candidate.at >= latest.at ? candidate : latest,
+    null,
+  );
 
 // Pages run newest first, so the first page with a move holds the latest one.
-async function latestTimelineMove(github: GitHubClient, repo: Repo, number: number, author: string | undefined) {
+async function latestTimelineMove(
+  github: GitHubClient,
+  repo: Repo,
+  number: number,
+  author: string | undefined,
+) {
   let before: string | null = null;
   do {
-    const page: TimelinePage = await github.graphql(TIMELINE_QUERY, { ...repo, number, before });
+    const page: TimelinePage = await github.graphql(TIMELINE_QUERY, {
+      ...repo,
+      number,
+      before,
+    });
     const items = page.repository.pullRequest?.timelineItems;
     if (!items) return null;
-    const latest = latestMove(items.nodes.flatMap((item) => move(item.createdAt, timelineTurn(item, author))));
+    const latest = latestMove(
+      items.nodes.flatMap((item) =>
+        move(item.createdAt, timelineTurn(item, author)),
+      ),
+    );
     if (latest !== null) return latest;
     before = items.pageInfo.hasPreviousPage ? items.pageInfo.startCursor : null;
   } while (before !== null);
@@ -164,30 +225,57 @@ async function latestTimelineMove(github: GitHubClient, repo: Repo, number: numb
  * Whether the PR is waiting on its author. Read from the PR's history rather than the
  * event at hand, so runs that overlap, arrive late or are re-run all agree.
  */
-export async function authorHasTurn(github: GitHubClient, { owner, repo }: Repo, number: number): Promise<boolean> {
-  const page = await github.graphql<ReviewsPage>(REVIEWS_QUERY, { owner, repo, number });
+export async function authorHasTurn(
+  github: GitHubClient,
+  { owner, repo }: Repo,
+  number: number,
+): Promise<boolean> {
+  const page = await github.graphql<ReviewsPage>(REVIEWS_QUERY, {
+    owner,
+    repo,
+    number,
+  });
   const pr = page.repository.pullRequest;
   if (pr === null) return false;
   const author = pr.author?.login;
-  const fromReviews = pr.reviews.nodes.flatMap((review) => move(review.submittedAt, reviewTurn(review, author, pr.headRefOid)));
-  const fromTimeline = await latestTimelineMove(github, { owner, repo }, number, author);
-  return latestMove(fromTimeline === null ? fromReviews : [...fromReviews, fromTimeline])?.turn === "author";
+  const fromReviews = pr.reviews.nodes.flatMap((review) =>
+    move(review.submittedAt, reviewTurn(review, author, pr.headRefOid)),
+  );
+  const fromTimeline = await latestTimelineMove(
+    github,
+    { owner, repo },
+    number,
+    author,
+  );
+  return (
+    latestMove(
+      fromTimeline === null ? fromReviews : [...fromReviews, fromTimeline],
+    )?.turn === "author"
+  );
 }
 
-async function relayedPull(github: GitHubClient, repo: Repo, run: NonNullable<TurnPayload["workflow_run"]>) {
+async function relayedPull(
+  github: GitHubClient,
+  repo: Repo,
+  run: NonNullable<TurnPayload["workflow_run"]>,
+) {
   const match = REVIEW_RUN_TITLE.exec(run.display_title);
   if (!RELAYED_EVENTS.includes(run.event) || !match) return null;
   const number = Number(match[1]);
-  const pull = await github.rest.pulls.get({ ...repo, pull_number: number }).then(
-    ({ data }): PullData | null => data,
-    (error: unknown) => {
-      if (isNotFound(error)) return null;
-      throw error;
-    },
-  );
+  const pull = await github.rest.pulls
+    .get({ ...repo, pull_number: number })
+    .then(
+      ({ data }): PullData | null => data,
+      (error: unknown) => {
+        if (isNotFound(error)) return null;
+        throw error;
+      },
+    );
   // Any PR can name a run, by editing pr-review-events.yml or adding a workflow of the
   // same name, so the title is only trusted for the PR the run was built from.
-  const builtFrom = pull?.head.repo?.full_name === run.head_repository.full_name && pull.head.ref === run.head_branch;
+  const builtFrom =
+    pull?.head.repo?.full_name === run.head_repository.full_name &&
+    pull.head.ref === run.head_branch;
   return builtFrom ? { number, pull } : null;
 }
 
@@ -202,12 +290,18 @@ export async function turnChangeForEvent(
   }
   if (payload.issue) {
     const { number, user, pull_request } = payload.issue;
-    return pull_request && payload.comment?.user.login === user.login ? { number, add: false } : null;
+    return pull_request && payload.comment?.user.login === user.login
+      ? { number, add: false }
+      : null;
   }
-  const relayed = payload.workflow_run ? await relayedPull(github, repo, payload.workflow_run) : null;
+  const relayed = payload.workflow_run
+    ? await relayedPull(github, repo, payload.workflow_run)
+    : null;
   if (relayed === null) return null;
   const add = await authorHasTurn(github, repo, relayed.number);
-  const labelled = relayed.pull.labels.some((label) => label.name === LABELS.waitingOnAuthor);
+  const labelled = relayed.pull.labels.some(
+    (label) => label.name === LABELS.waitingOnAuthor,
+  );
   return add === labelled ? null : { number: relayed.number, add };
 }
 
@@ -224,18 +318,27 @@ export async function updateTurnLabel({
   if (change === null) return;
   const issue = { ...context.repo, issue_number: change.number };
   if (change.add) {
-    await github.rest.issues.addLabels({ ...issue, labels: [LABELS.waitingOnAuthor] });
+    await github.rest.issues.addLabels({
+      ...issue,
+      labels: [LABELS.waitingOnAuthor],
+    });
   } else {
     await removeLabel(github, issue, LABELS.waitingOnAuthor);
   }
-  core.info(`#${change.number}: ${change.add ? "+" : "-"}${LABELS.waitingOnAuthor}`);
+  core.info(
+    `#${change.number}: ${change.add ? "+" : "-"}${LABELS.waitingOnAuthor}`,
+  );
 }
 
 /**
  * Removes waiting-on-author from a PR whose history says the turn has moved on. Returns
  * whether the label was stale; changes nothing unless `live`.
  */
-export async function clearStaleTurnLabel(github: GitHubClient, issue: IssueRef, live: boolean) {
+export async function clearStaleTurnLabel(
+  github: GitHubClient,
+  issue: IssueRef,
+  live: boolean,
+) {
   if (await authorHasTurn(github, issue, issue.issue_number)) return false;
   if (live) await removeLabel(github, issue, LABELS.waitingOnAuthor);
   return true;

@@ -44,7 +44,7 @@ any other.
 ```java
 /**
  * Authority on which filesystem locations a policy may read or write. Fail-closed
- * in order: denied entirely under the saas profile; Stirling's own config dir is
+ * in order: denied entirely under the saas profile; Fold's own config dir is
  * always rejected; the path must resolve within policies.allowedFolderRoots.
  *
  * <p>Compared after normalisation so {@code ..} cannot escape a root. Symlink

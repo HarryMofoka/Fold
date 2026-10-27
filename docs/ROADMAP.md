@@ -60,7 +60,7 @@ Based on the code-level dependency and runtime audit, all Fold features are clas
   - Client-side color & contrast adjustment (`useAdjustContrastOperation.ts` via PDFium WASM).
 
 ### B. Verified Working (Empirically Proven)
-- Docker full stack verified via upstream builds (`stirlingtools/stirling-pdf-base`).
+- Docker full stack verified via upstream builds.
 - Client-side WASM PDFium rendering and manipulation verified in frontend tests.
 
 ### C. Needs Packaging (Desktop Application)
@@ -76,7 +76,7 @@ Based on the code-level dependency and runtime audit, all Fold features are clas
 - **Decouple hardcoded Linux paths**: Replace `/usr/share/tesseract-ocr/5/tessdata` in `RuntimePathConfig.java` with a cross-platform resolver that automatically checks application resource directories.
 - **Desktop Resource Discovery**: Teach `RuntimePathConfig.java` to discover bundled binaries (`tesseract`, `qpdf`, `gs`) relative to the application install path on Windows/macOS.
 - **Graceful Degradation**: Replace uncaught 500 exceptions with typed capability warnings when optional CLI tools are absent.
-- **Stirling Office Convert Defaults**: Change default from external LibreOffice to pure Java Stirling Office Convert (`system.stirlingOfficeConversion: true`) for standard DOCX/XLSX handling.
+- **Built-in Office Convert Defaults**: Change default from external LibreOffice to pure Java Office Convert for standard DOCX/XLSX handling.
 
 ### E. Needs Local / WASM Implementation (PWA & Offline Web)
 *Move from Java backend dependency to 100% in-browser client execution:*
@@ -159,7 +159,7 @@ Phase 5: Mobile & Cross-Platform (Android / iOS)
 - [ ] **Bundle Portable Tesseract & tessdata:** Package `tesseract.exe`, `eng.traineddata`, and `osd.traineddata` in desktop installer.
 - [ ] **Bundle Portable QPDF:** Include `qpdf.exe` for instant repair and linearization.
 - [ ] **Update RuntimePathConfig:** Implement dynamic discovery of bundled desktop binaries so no manual configuration is required.
-- [ ] **Default to Stirling Office Convert:** Enable pure Java Office conversion by default for zero-install DOCX/XLSX conversion.
+- [ ] **Default to Built-in Office Convert:** Enable pure Java Office conversion by default for zero-install DOCX/XLSX conversion.
 
 ---
 

@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 # Tasks operate from the workspace root (frontend/). Editor commands pass
 # `editor` as the vite project root (positional after `build` / before the
@@ -12,8 +12,8 @@ vars:
   DEV_LABEL:
     sh: >-
       {{if eq OS "windows"}}powershell -NoProfile -Command '$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; Split-Path -Leaf $root'{{else}}basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"{{end}}
-  VITEST_JOBS: '{{if .STIRLING_CHECK_JOBS}} --maxWorkers={{.STIRLING_CHECK_JOBS}}{{end}}'
-  OX_THREADS: '{{if .STIRLING_CHECK_JOBS}} --threads={{.STIRLING_CHECK_JOBS}}{{end}}'
+  VITEST_JOBS: "{{if .STIRLING_CHECK_JOBS}} --maxWorkers={{.STIRLING_CHECK_JOBS}}{{end}}"
+  OX_THREADS: "{{if .STIRLING_CHECK_JOBS}} --threads={{.STIRLING_CHECK_JOBS}}{{end}}"
 
 tasks:
   install:
@@ -65,7 +65,7 @@ tasks:
       MODE: '{{.MODE | default ""}}'
     deps:
       - task: prepare:env
-        vars: { MODE: '{{.MODE}}' }
+        vars: { MODE: "{{.MODE}}" }
       - prepare:og
 
   # ============================================================
@@ -76,16 +76,16 @@ tasks:
     internal: true
     ignore_error: true
     vars:
-      MODE: '{{.MODE}}'
+      MODE: "{{.MODE}}"
       SAAS_BASE_URL: '{{.SAAS_BASE_URL | default ""}}'
       PORT: '{{.PORT | default "5173"}}'
       BACKEND_URL: '{{.BACKEND_URL | default "http://localhost:8080"}}'
       OPEN: '{{.OPEN | default ""}}'
     env:
-      BACKEND_URL: '{{.BACKEND_URL}}'
-      STIRLING_DEV_LABEL: '{{.DEV_LABEL}}'
+      BACKEND_URL: "{{.BACKEND_URL}}"
+      STIRLING_DEV_LABEL: "{{.DEV_LABEL}}"
     cmds:
-      - '{{if .SAAS_BASE_URL}}VITE_SAAS_API_URL={{.SAAS_BASE_URL}} {{end}}npx vite editor --mode {{.MODE}} --port {{.PORT}}{{if .OPEN}} --open{{end}}'
+      - "{{if .SAAS_BASE_URL}}VITE_SAAS_API_URL={{.SAAS_BASE_URL}} {{end}}npx vite editor --mode {{.MODE}} --port {{.PORT}}{{if .OPEN}} --open{{end}}"
 
   # Separate from dev:_run rather than a flag on it: Task sets an `env:` key even
   # when its value resolves to empty, and Vite treats an empty process.env VITE_* as
@@ -96,16 +96,16 @@ tasks:
     ignore_error: true
     # The backend's own env files, so both halves target one project. Paths are
     # relative to this taskfile's dir, `frontend`.
-    dotenv: ['../app/.env.saas.local', '../app/.env.saas']
+    dotenv: ["../app/.env.saas.local", "../app/.env.saas"]
     vars:
       PORT: '{{.PORT | default "5173"}}'
       BACKEND_URL: '{{.BACKEND_URL | default "http://localhost:8080"}}'
       OPEN: '{{.OPEN | default ""}}'
       SAAS_ENV: '{{.SAAS_ENV | default "dev"}}'
     env:
-      BACKEND_URL: '{{.BACKEND_URL}}'
-      STIRLING_DEV_LABEL: '{{.DEV_LABEL}}'
-      SAAS_ENV: '{{.SAAS_ENV}}'
+      BACKEND_URL: "{{.BACKEND_URL}}"
+      STIRLING_DEV_LABEL: "{{.DEV_LABEL}}"
+      SAAS_ENV: "{{.SAAS_ENV}}"
       # A real process.env VITE_* beats a committed .env in Vite (loadEnv applies
       # process.env last), which is what lets this override editor/.env.
       #
@@ -133,21 +133,39 @@ tasks:
     desc: "Start frontend dev server"
     cmds:
       - task: dev:proprietary
-        vars: { PORT: '{{.PORT}}', BACKEND_URL: '{{.BACKEND_URL}}', OPEN: '{{.OPEN}}' }
+        vars:
+          {
+            PORT: "{{.PORT}}",
+            BACKEND_URL: "{{.BACKEND_URL}}",
+            OPEN: "{{.OPEN}}",
+          }
 
   dev:core:
     desc: "Start frontend dev server in core mode"
     deps: [prepare]
     cmds:
       - task: dev:_run
-        vars: { MODE: core, PORT: '{{.PORT}}', BACKEND_URL: '{{.BACKEND_URL}}', OPEN: '{{.OPEN}}' }
+        vars:
+          {
+            MODE: core,
+            PORT: "{{.PORT}}",
+            BACKEND_URL: "{{.BACKEND_URL}}",
+            OPEN: "{{.OPEN}}",
+          }
 
   dev:proprietary:
     desc: "Start frontend dev server in proprietary mode"
     deps: [prepare]
     cmds:
       - task: dev:_run
-        vars: { MODE: proprietary, PORT: '{{.PORT}}', BACKEND_URL: '{{.BACKEND_URL}}', SAAS_BASE_URL: '{{.SAAS_BASE_URL}}', OPEN: '{{.OPEN}}' }
+        vars:
+          {
+            MODE: proprietary,
+            PORT: "{{.PORT}}",
+            BACKEND_URL: "{{.BACKEND_URL}}",
+            SAAS_BASE_URL: "{{.SAAS_BASE_URL}}",
+            OPEN: "{{.OPEN}}",
+          }
 
   dev:saas:
     desc: "Start frontend dev server in SaaS mode (SAAS_ENV=dev|staging|prod)"
@@ -160,13 +178,13 @@ tasks:
       # the committed editor/.env alone.
       RUNNER: '{{if eq .SAAS_ENV "prod"}}dev:_run{{else}}dev:_run:saas{{end}}'
     cmds:
-      - task: '{{.RUNNER}}'
+      - task: "{{.RUNNER}}"
         vars:
           MODE: saas
-          PORT: '{{.PORT}}'
-          BACKEND_URL: '{{.BACKEND_URL}}'
-          OPEN: '{{.OPEN}}'
-          SAAS_ENV: '{{.SAAS_ENV}}'
+          PORT: "{{.PORT}}"
+          BACKEND_URL: "{{.BACKEND_URL}}"
+          OPEN: "{{.OPEN}}"
+          SAAS_ENV: "{{.SAAS_ENV}}"
 
   staging:saas:
     desc: "Start frontend dev server against the shared v3 staging project"
@@ -174,9 +192,9 @@ tasks:
       - task: dev:saas
         vars:
           SAAS_ENV: staging
-          PORT: '{{.PORT}}'
-          BACKEND_URL: '{{.BACKEND_URL}}'
-          OPEN: '{{.OPEN}}'
+          PORT: "{{.PORT}}"
+          BACKEND_URL: "{{.BACKEND_URL}}"
+          OPEN: "{{.OPEN}}"
 
   dev:desktop:
     desc: "Start frontend dev server in desktop mode"
@@ -185,14 +203,26 @@ tasks:
         vars: { MODE: desktop }
     cmds:
       - task: dev:_run
-        vars: { MODE: desktop, PORT: '{{.PORT}}', BACKEND_URL: '{{.BACKEND_URL}}', OPEN: '{{.OPEN}}' }
+        vars:
+          {
+            MODE: desktop,
+            PORT: "{{.PORT}}",
+            BACKEND_URL: "{{.BACKEND_URL}}",
+            OPEN: "{{.OPEN}}",
+          }
 
   dev:prototypes:
     desc: "Start frontend dev server in prototypes mode"
     deps: [prepare]
     cmds:
       - task: dev:_run
-        vars: { MODE: prototypes, PORT: '{{.PORT}}', BACKEND_URL: '{{.BACKEND_URL}}', OPEN: '{{.OPEN}}' }
+        vars:
+          {
+            MODE: prototypes,
+            PORT: "{{.PORT}}",
+            BACKEND_URL: "{{.BACKEND_URL}}",
+            OPEN: "{{.OPEN}}",
+          }
 
   # ============================================================
   # Build
@@ -216,7 +246,7 @@ tasks:
     vars:
       PREVIEW: '{{.PREVIEW | default ""}}'
     cmds:
-      - '{{if .PREVIEW}}VITE_BUILD_FOR_PREVIEW=1 {{end}}npx vite build editor --mode proprietary'
+      - "{{if .PREVIEW}}VITE_BUILD_FOR_PREVIEW=1 {{end}}npx vite build editor --mode proprietary"
 
   build:saas:
     desc: "Build for SaaS mode"
@@ -247,7 +277,6 @@ tasks:
     deps: [prepare]
     cmds:
       - npx vite build editor --mode prototypes
-
 
   storybook:
     desc: "Start Storybook dev server"
@@ -423,7 +452,7 @@ tasks:
   typecheck:_run:
     internal: true
     cmds:
-      - 'npx tsc --noEmit --project {{.PROJECT}}'
+      - "npx tsc --noEmit --project {{.PROJECT}}"
 
   typecheck:core:
     desc: "Typecheck core build variant"

@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 vars:
   # jdk.dynalink is required by VeraPDF (PDF/A validation); without it the bundled JRE throws

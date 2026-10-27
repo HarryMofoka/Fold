@@ -1,8 +1,8 @@
-# Stirling PDF File History Specification
+# Fold File History Specification
 
 ## Overview
 
-Stirling PDF implements a client-side file history system using IndexedDB storage. File metadata, including version history and tool chains, are stored as `StirlingFileStub` objects that travel alongside the actual file data. This enables comprehensive version tracking, tool history, and file lineage management without modifying PDF content.
+Fold implements a client-side file history system using IndexedDB storage. File metadata, including version history and tool chains, are stored as `FoldFileStub` objects that travel alongside the actual file data. This enables comprehensive version tracking, tool history, and file lineage management without modifying PDF content.
 
 ## Storage Architecture
 
@@ -16,7 +16,7 @@ File history is stored in the browser's IndexedDB using the `fileStorage` servic
 ### Core Data Structures
 
 ```typescript
-interface StirlingFileStub extends BaseFileMetadata {
+interface FoldFileStub extends BaseFileMetadata {
   id: FileId;                      // Unique file identifier (UUID)
   quickKey: string;                // Deduplication key: name|size|lastModified
   thumbnailUrl?: string;           // Generated thumbnail blob URL
@@ -44,7 +44,7 @@ interface ToolOperation {
   timestamp: number;               // When the tool was applied
 }
 
-interface StoredStirlingFileRecord extends StirlingFileStub {
+interface StoredFoldFileRecord extends FoldFileStub {
   data: ArrayBuffer;               // Actual file content
   fileId: FileId;                  // Duplicate for indexing
 }
@@ -80,15 +80,15 @@ document.pdf (v3, isLeaf: true)  ← Current active version
 **Core Methods:**
 ```typescript
 // Store file with complete metadata
-async storeStirlingFile(stirlingFile: StirlingFile, stub: StirlingFileStub): Promise<void>
+async storeFoldFile(foldFile: FoldFile, stub: FoldFileStub): Promise<void>
 
 // Load file with metadata
-async getStirlingFile(id: FileId): Promise<StirlingFile | null>
-async getStirlingFileStub(id: FileId): Promise<StirlingFileStub | null>
+async getFoldFile(id: FileId): Promise<FoldFile | null>
+async getFoldFileStub(id: FileId): Promise<FoldFileStub | null>
 
 // Query operations  
-async getLeafStirlingFileStubs(): Promise<StirlingFileStub[]>
-async getAllStirlingFileStubs(): Promise<StirlingFileStub[]>
+async getLeafFoldFileStubs(): Promise<FoldFileStub[]>
+async getAllFoldFileStubs(): Promise<FoldFileStub[]>
 
 // Version management
 async markFileAsProcessed(fileId: FileId): Promise<boolean>  // Set isLeaf = false
@@ -97,19 +97,19 @@ async markFileAsLeaf(fileId: FileId): Promise<boolean>       // Set isLeaf = tru
 
 ### 2. File Context Integration
 
-**FileContext** manages runtime state with `StirlingFileStub[]` in memory:
+**FileContext** manages runtime state with `FoldFileStub[]` in memory:
 ```typescript
 interface FileContextState {
   files: {
     ids: FileId[];
-    byId: Record<FileId, StirlingFileStub>;
+    byId: Record<FileId, FoldFileStub>;
   };
 }
 ```
 
 **Key Operations:**
 - `addFiles()`: Stores new files with initial metadata
-- `addStirlingFileStubs()`: Loads existing files from storage with preserved metadata
+- `addFoldFileStubs()`: Loads existing files from storage with preserved metadata
 - `consumeFiles()`: Processes files through tools, creating new versions
 
 ### 3. Tool Operation Integration
@@ -117,7 +117,7 @@ interface FileContextState {
 **Tool Processing Flow:**
 1. **Input**: User selects files (marked as `isLeaf: true`)
 2. **Processing**: Backend processes files and returns results
-3. **History Creation**: New `StirlingFileStub` created with:
+3. **History Creation**: New `FoldFileStub` created with:
    - Incremented version number
    - Updated tool history
    - Parent file reference
@@ -127,11 +127,11 @@ interface FileContextState {
 **Child Stub Creation:**
 ```typescript
 export function createChildStub(
-  parentStub: StirlingFileStub, 
+  parentStub: FoldFileStub, 
   operation: { toolName: string; timestamp: number }, 
   resultingFile: File, 
   thumbnail?: string
-): StirlingFileStub {
+): FoldFileStub {
   return {
     id: createFileId(),
     name: resultingFile.name,
@@ -173,8 +173,8 @@ export function createChildStub(
 **File Selection Flow:**
 ```typescript
 // Recent files (from storage)
-onRecentFileSelect: (stirlingFileStubs: StirlingFileStub[]) => void
-// Calls: actions.addStirlingFileStubs(stirlingFileStubs, options)
+onRecentFileSelect: (foldFileStubs: FoldFileStub[]) => void
+// Calls: actions.addFoldFileStubs(foldFileStubs, options)
 
 // New uploads  
 onFileUpload: (files: File[]) => void
@@ -187,7 +187,7 @@ onFileUpload: (files: File[]) => void
 const { expandedFileIds, onToggleExpansion } = useFileManagerContext();
 
 // Restore history file to current
-const handleAddToRecents = (file: StirlingFileStub) => {
+const handleAddToRecents = (file: FoldFileStub) => {
   fileStorage.markFileAsLeaf(file.id);  // Make this version current
 };
 ```
@@ -198,8 +198,8 @@ const handleAddToRecents = (file: StirlingFileStub) => {
 ```
 1. User uploads files → addFiles() 
 2. Generate thumbnails and page count
-3. Create StirlingFileStub with isLeaf: true, versionNumber: 1
-4. Store both StirlingFile + StirlingFileStub in IndexedDB
+3. Create FoldFileStub with isLeaf: true, versionNumber: 1
+4. Store both FoldFile + FoldFileStub in IndexedDB
 5. Dispatch to FileContext state
 ```
 
@@ -217,8 +217,8 @@ const handleAddToRecents = (file: StirlingFileStub) => {
 ### File Loading (Recent Files)
 ```
 1. User selects from FileManager → onRecentFileSelect()
-2. addStirlingFileStubs() with preserved metadata
-3. Load actual StirlingFile data from storage  
+2. addFoldFileStubs() with preserved metadata
+3. Load actual FoldFile data from storage  
 4. Files appear in workbench with complete history intact
 ```
 
@@ -227,13 +227,13 @@ const handleAddToRecents = (file: StirlingFileStub) => {
 ### Metadata Regeneration
 When loading files from storage, missing `processedFile` data is regenerated:
 ```typescript
-// In addStirlingFileStubs()
+// In addFoldFileStubs()
 const needsProcessing = !record.processedFile || 
                         !record.processedFile.pages || 
                         record.processedFile.pages.length === 0;
 
 if (needsProcessing) {
-  const result = await generateThumbnailWithMetadata(stirlingFile);
+  const result = await generateThumbnailWithMetadata(foldFile);
   record.processedFile = createProcessedFile(result.pageCount, result.thumbnail);
 }
 ```
@@ -273,7 +273,7 @@ This prevents duplicate uploads while allowing different versions of the same lo
 ```typescript
 const { actions } = useFileActions();
 await actions.addFiles(files);  // For new uploads
-await actions.addStirlingFileStubs(stubs);  // For existing files
+await actions.addFoldFileStubs(stubs);  // For existing files
 ```
 
 2. **Preserve Metadata When Processing**:
@@ -286,8 +286,8 @@ const childStub = createChildStub(parentStub, {
 
 3. **Handle Storage Operations**:
 ```typescript
-await fileStorage.storeStirlingFile(stirlingFile, stirlingFileStub);
-const stub = await fileStorage.getStirlingFileStub(fileId);
+await fileStorage.storeFoldFile(foldFile, foldFileStub);
+const stub = await fileStorage.getFoldFileStub(fileId);
 ```
 
 ### Testing File History
@@ -315,5 +315,5 @@ const stub = await fileStorage.getStirlingFileStub(fileId);
 ---
 
 **Last Updated**: January 2025  
-**Implementation**: Stirling PDF Frontend v2  
+**Implementation**: Fold Frontend v2  
 **Storage Version**: IndexedDB with fileStorage service

@@ -1,0 +1,95 @@
+import "@testing-library/jest-dom";
+import { vi } from "vitest";
+import i18n from "i18next";
+
+// The shims `src/index.tsx` installs - see core/setupTests.ts.
+import "@app/utils/engineShims";
+
+// Modules outside React call i18n.t directly; no resources means the English defaults render.
+void i18n.init({
+  lng: "en-US",
+  resources: {},
+  initAsync: false,
+  interpolation: { escapeValue: false },
+});
+
+// Mock BroadcastChannel to avoid Node 22 native Event vs jsdom Event mismatch in tests
+if (typeof BroadcastChannel !== "undefined") {
+  class MockBroadcastChannel extends EventTarget {
+    name: string;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onmessageerror: ((event: MessageEvent) => void) | null = null;
+    constructor(name: string) {
+      super();
+      this.name = name;
+    }
+    postMessage(_message: unknown): void {}
+    close(): void {}
+  }
+  globalThis.BroadcastChannel = MockBroadcastChannel;
+  if (typeof window !== "undefined") {
+    window.BroadcastChannel = MockBroadcastChannel;
+  }
+}
+
+// Mirrors the editor's setup: jsdom lacks a handful of browser APIs that shared
+// components (Mantine FocusTrap, responsive helpers) touch on render.
+
+class LocalStorageMock implements Storage {
+  private store: Record<string, string> = {};
+
+  get length(): number {
+    return Object.keys(this.store).length;
+  }
+
+  clear(): void {
+    this.store = {};
+  }
+
+  getItem(key: string): string | null {
+    return this.store[key] ?? null;
+  }
+
+  key(index: number): string | null {
+    return Object.keys(this.store)[index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    delete this.store[key];
+  }
+
+  setItem(key: string, value: string): void {
+    this.store[key] = value;
+  }
+}
+
+Object.defineProperty(window, "localStorage", {
+  value: new LocalStorageMock(),
+  writable: true,
+});
+
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});

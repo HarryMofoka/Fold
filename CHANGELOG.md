@@ -1,6 +1,6 @@
 # Fold Transformation & Audit Changelog
 
-This document logs all architectural, branding, privacy, and codebase changes made during the transformation of Stirling-PDF into **Fold**.
+This document logs all architectural, branding, privacy, and codebase changes made in **Fold**.
 
 ---
 

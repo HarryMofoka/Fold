@@ -9,12 +9,12 @@ The Fold team takes security vulnerabilities seriously. We appreciate your effor
 You can report security vulnerabilities through two channels:
 
 1. **GitHub Security Advisory**:
-   - Navigate to the [Security tab](https://github.com/Stirling-Tools/Stirling-PDF/security) in our repository
+   - Navigate to the Security tab in this repository
    - Click on "Report a vulnerability"
    - Provide a detailed description of the vulnerability
 
-2. **Direct Email**:
-   - Send your report to security@stirlingpdf.com
+2. **Direct Disclosure**:
+   - Submit a private vulnerability advisory via GitHub Advisories
    - Please include as much information as possible about the vulnerability
 
 ### What to Include
