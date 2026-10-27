@@ -37,6 +37,7 @@ export interface NavFooterProps {
   /** Icon-rail state: labels collapse to tooltips. */
   collapsed?: boolean;
   className?: string;
+  onExit?: () => void;
 }
 
 /**
@@ -73,6 +74,7 @@ export function NavFooter({
   showAccount = true,
   collapsed = false,
   className,
+  onExit,
 }: NavFooterProps) {
   const { t } = useTranslation();
   const [animate] = useState(() => {
@@ -182,6 +184,37 @@ export function NavFooter({
             {onOpenSettings && !collapsed && (
               <span className="nav-footer__trailing" aria-hidden>
                 <Icon name="settings" size={"1.1rem"} />
+              </span>
+            )}
+          </button>
+        </Tooltip>
+      ),
+    });
+  }
+
+  if (onExit) {
+    rows.push({
+      key: "exit",
+      node: (
+        <Tooltip
+          label={t("common.exitEditor", "Exit editor")}
+          position="right"
+          withinPortal
+          disabled={!collapsed}
+        >
+          <button
+            type="button"
+            className="nav-footer__row nav-footer__exit"
+            onClick={onExit}
+            data-testid="exit-editor-footer-button"
+            aria-label={t("common.exitEditor", "Exit editor")}
+          >
+            <span className="nav-footer__row-icon" aria-hidden>
+              <Icon name="log-out" size="1.1rem" />
+            </span>
+            {!collapsed && (
+              <span className="nav-footer__row-label">
+                {t("common.exitEditor", "Exit editor")}
               </span>
             )}
           </button>

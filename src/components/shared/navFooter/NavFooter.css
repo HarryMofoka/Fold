@@ -154,3 +154,13 @@
   justify-content: center;
   padding-inline: 0;
 }
+
+.nav-footer__exit {
+  color: var(--c-text-subtle);
+}
+
+.nav-footer__exit:hover {
+  color: var(--c-text);
+  background-color: var(--c-hover);
+}
+

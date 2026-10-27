@@ -35,6 +35,7 @@ export interface QuickNavRailContainerProps extends Omit<
   notificationsOpen?: boolean;
   identity?: QuickNavIdentity | null;
   onReturnHome: () => void;
+  onExitEditor?: () => void;
 }
 
 /** The fixed-width column the rail sits in. */
@@ -48,6 +49,7 @@ export function QuickNavRailContainer({
   notificationsOpen,
   identity = null,
   onReturnHome,
+  onExitEditor,
   ...railProps
 }: QuickNavRailContainerProps) {
   const { t } = useTranslation();
@@ -88,6 +90,14 @@ export function QuickNavRailContainer({
                   onOpen={onOpenAccount}
                   identity={identity}
                   active={accountActive}
+                />
+              )}
+              {onExitEditor && (
+                <RailButton
+                  label={t("quickNav.exitEditor", "Exit editor")}
+                  icon={<Icon name="log-out" size="1.125rem" />}
+                  testId="exit-editor-rail-button"
+                  onClick={onExitEditor}
                 />
               )}
             </div>

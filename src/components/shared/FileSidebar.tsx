@@ -8,6 +8,7 @@ import React, {
   type RefCallback,
 } from "react";
 import { Loader, Tooltip } from "@mantine/core";
+import { useNavigate } from "react-router-dom";
 import { ActionIcon } from "@app/ui/ActionIcon";
 import { NavSurface } from "@app/ui/NavSurface";
 import { Button } from "@app/ui/Button";
@@ -100,6 +101,7 @@ export interface FileSidebarProps {
     testId?: string;
     render?: () => React.ReactNode;
   }>;
+  onExit?: () => void;
 }
 
 /** Isolates per-file progress updates from the sidebar's file-list renders. */
@@ -499,10 +501,12 @@ const FileSidebar = forwardRef<HTMLDivElement, FileSidebarProps>(
       onRegisterOpenFromComputer,
       onPickGoogleDriveFiles,
       extraActions,
+      onExit,
     },
     ref,
   ) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const labelName = useLabelName();
     // Classification off (non-SaaS / AI-off) → never show the per-row label chip,
     // even if a stub carries labels from an imported PDF; keeps the row plain.
@@ -526,6 +530,14 @@ const FileSidebar = forwardRef<HTMLDivElement, FileSidebarProps>(
     // The page editor lays out every open file, so an added file belongs there.
     const staysOnAdd = currentWorkbench === "pageEditor";
     const { requestNavigation } = useNavigationGuard();
+
+    const handleExit = useCallback(() => {
+      if (onExit) {
+        onExit();
+      } else {
+        requestNavigation(() => navigate("/"));
+      }
+    }, [onExit, requestNavigation, navigate]);
     const { activeFileId, setActiveFileId } = useViewer();
     const { addFiles } = useFileHandler();
     const indexedDB = useIndexedDB();
@@ -1202,7 +1214,7 @@ const FileSidebar = forwardRef<HTMLDivElement, FileSidebarProps>(
       >
         <FileDropOverlay show={isFileDragOver} />
         <div className="file-sidebar-inner">
-          <SidebarHeader />
+          <SidebarHeader onExit={handleExit} />
 
           <input
             ref={nativeFileInputRef}
@@ -1284,6 +1296,7 @@ const FileSidebar = forwardRef<HTMLDivElement, FileSidebarProps>(
           showAccount={!accountHoisted}
           credits={credits}
           onOpenPlan={openPlan ?? undefined}
+          onExit={handleExit}
         />
       </div>
     );

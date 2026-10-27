@@ -163,6 +163,10 @@ export default function HomePage() {
   const { activeFiles } = useFileContext();
   const navigationState = useNavigationState();
   const { requestNavigation } = useNavigationGuard();
+
+  const handleExit = useCallback(() => {
+    requestNavigation(() => navigate("/"));
+  }, [navigate, requestNavigation]);
   const quickNavHost = useQuickNavHost();
   const openSigning = useOpenSigning();
   const [mobileSignOpen, setMobileSignOpen] = useState(false);
@@ -833,6 +837,7 @@ export default function HomePage() {
                   active={navigationState.workbench === "myFiles"}
                   onOpenSettings={openSettings}
                   onRegisterOpenFromComputer={registerOpenFromComputer}
+                  onExit={handleExit}
                 />
               </div>
             )}

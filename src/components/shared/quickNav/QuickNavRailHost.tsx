@@ -257,6 +257,8 @@ export function QuickNavRailHost() {
   // A route that isn't the app hides the bar - see useSuppressQuickNavRail.
   if (!appMounted || host?.chromeless) return null;
 
+  const exitEditor = () => guarded(() => navigate("/"));
+
   return (
     <QuickNavRailContainer
       groups={[surfaces, within]}
@@ -267,6 +269,7 @@ export function QuickNavRailHost() {
       accountActive={inSettings}
       onOpenDocs={openDocs}
       docsActive={inDocs}
+      onExitEditor={exitEditor}
       onInvite={
         // Spelt out: VIEW_PATHS lives in the portal, which core cannot import.
         HAS_PORTAL && host?.portalAccess
