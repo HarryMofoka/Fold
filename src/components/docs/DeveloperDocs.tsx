@@ -67,15 +67,64 @@ export function DeveloperDocs() {
 
   return (
     <div className={"portal-docs" + (hasToc ? " portal-docs--with-toc" : "")}>
-      <Button
-        variant="tertiary"
-        className="portal-docs__nav-toggle"
-        aria-expanded={navOpen}
-        onClick={() => setNavOpen((open) => !open)}
-        leftSection={<span aria-hidden>☰</span>}
-      >
-        {t("portal.docs.browse")}
-      </Button>
+      <div className="portal-docs__mobile-bar">
+        <button
+          type="button"
+          className="portal-docs__mobile-back"
+          aria-label={t("common.back", "Back")}
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate("/");
+            }
+          }}
+        >
+          <svg
+            className="portal-docs__back-svg"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span>{t("common.back", "Back")}</span>
+        </button>
+
+        <a
+          href="/"
+          className="portal-docs__mobile-brand"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
+          }}
+          aria-label="Fold Home"
+        >
+          <svg className="portal-docs__mobile-logo" viewBox="0 0 24 24">
+            <path
+              fill="currentColor"
+              d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z"
+            />
+          </svg>
+          <span className="portal-docs__mobile-brand-name">Docs</span>
+        </a>
+
+        <Button
+          variant="tertiary"
+          className="portal-docs__nav-toggle"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen((open) => !open)}
+          leftSection={<span aria-hidden>☰</span>}
+        >
+          {t("portal.docs.browse")}
+        </Button>
+      </div>
+
 
       {/* Layout column, not a landmark: the <nav> inside already carries its
           own named landmark, and an unlabelled complementary region would be

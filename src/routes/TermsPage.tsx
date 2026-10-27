@@ -94,6 +94,7 @@ const TERMS_SECTIONS: TocItem[] = [
 export default function TermsPage() {
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState<string>("acceptance-scope");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const rootEl = document.querySelector(".legal-docs-page");
@@ -140,20 +141,38 @@ export default function TermsPage() {
     <div className="legal-docs-page">
       {/* Top Header Navigation */}
       <header className="legal-docs-header" data-purpose="site-header">
-        <a
-          aria-label="Fold Home"
-          className="legal-docs-header__brand"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
-          href="/"
-        >
-          <svg className="legal-docs-header__logo" viewBox="0 0 24 24">
-            <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z" />
-          </svg>
-          <span className="legal-docs-header__title">fold</span>
-        </a>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label="Go back"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/");
+              }
+            }}
+            className="legal-docs-header__back-btn"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <a
+            aria-label="Fold Home"
+            className="legal-docs-header__brand"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/");
+            }}
+            href="/"
+          >
+            <svg className="legal-docs-header__logo" viewBox="0 0 24 24">
+              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z" />
+            </svg>
+            <span className="legal-docs-header__title">fold</span>
+          </a>
+        </div>
 
         <nav className="legal-docs-header__nav">
           <a
@@ -199,26 +218,112 @@ export default function TermsPage() {
           <span className="legal-docs-header__link is-active">Terms</span>
         </nav>
 
-        <button
-          onClick={() => navigate("/open")}
-          className="legal-docs-header__cta"
-        >
-          <span>Open Fold</span>
-          <svg
-            className="w-3.5 h-3.5 opacity-80"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/open")}
+            className="legal-docs-header__cta"
           >
-            <path
-              d="M5 12h14M12 5l7 7-7 7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
+            <span>Open Fold</span>
+            <svg
+              className="w-3.5 h-3.5 opacity-80"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            aria-label="Toggle navigation menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="legal-docs-header__hamburger-btn"
+          >
+            <span
+              className={`legal-docs-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`}
             />
-          </svg>
-        </button>
+            <span
+              className={`legal-docs-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`}
+            />
+            <span
+              className={`legal-docs-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`}
+            />
+          </button>
+
+        </div>
       </header>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="legal-docs-mobile-drawer">
+          <div className="legal-docs-mobile-drawer__links">
+            <a
+              className="legal-docs-mobile-drawer__link"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/");
+                setMobileMenuOpen(false);
+              }}
+              href="/"
+            >
+              Home
+            </a>
+            <a
+              className="legal-docs-mobile-drawer__link"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/open");
+                setMobileMenuOpen(false);
+              }}
+              href="/open"
+            >
+              Platforms
+            </a>
+            <a
+              className="legal-docs-mobile-drawer__link"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/docs");
+                setMobileMenuOpen(false);
+              }}
+              href="/docs"
+            >
+              Documentation
+            </a>
+            <a
+              className="legal-docs-mobile-drawer__link"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/privacy");
+                setMobileMenuOpen(false);
+              }}
+              href="/privacy"
+            >
+              Privacy Policy
+            </a>
+            <span className="legal-docs-mobile-drawer__link is-active">
+              Terms of Service
+            </span>
+          </div>
+          <div className="pt-3 border-t border-neutral-200/80">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/open");
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-black text-white text-xs font-medium cursor-pointer"
+            >
+              <span>Open Fold</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Documentation Shell */}
       <div className="legal-docs-layout">

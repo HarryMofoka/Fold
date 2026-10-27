@@ -170,6 +170,7 @@ export default function HomePage() {
   const quickNavHost = useQuickNavHost();
   const openSigning = useOpenSigning();
   const [mobileSignOpen, setMobileSignOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // From the processor's Reader entry. Ref-guarded: one-shot, and StrictMode double-invokes.
   const consumedReaderRequest = useRef(false);
@@ -728,9 +729,34 @@ export default function HomePage() {
             {/* The library brings its own tabs and folder path, so the
               tools/workspace toggle would only cost it vertical space. Every
               other view keeps the toggle. */}
-            {!isWorkspaceHub && (
+            {!isWorkspaceHub ? (
               <div className="mobile-toggle">
-                <div className="mobile-brand">
+                <button
+                  type="button"
+                  className="mobile-header-back-button"
+                  aria-label={
+                    selectedToolKey
+                      ? t("home.mobile.backToTools", "Back to tools")
+                      : t("home.mobile.exitEditor", "Exit editor")
+                  }
+                  onClick={() => {
+                    if (selectedToolKey) {
+                      handleBackToTools();
+                      setActiveMobileView("tools");
+                    } else {
+                      handleExit();
+                    }
+                  }}
+                >
+                  <Icon name="chevron-left" size="1.25rem" />
+                </button>
+                <div
+                  className="mobile-brand"
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleExit}
+                  aria-label={brandAltText}
+                >
                   <LogoIcon className="mobile-brand-icon" />
                   <Wordmark alt={brandAltText} className="mobile-brand-text" />
                 </div>
@@ -761,6 +787,46 @@ export default function HomePage() {
                     {t("home.mobile.workspace", "Workspace")}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  className="mobile-hamburger-button"
+                  aria-label={t("home.mobile.toggleMenu", "Toggle navigation menu")}
+                  aria-expanded={mobileMenuOpen}
+                  onClick={() => setMobileMenuOpen((open) => !open)}
+                >
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`} />
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`} />
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`} />
+                </button>
+              </div>
+            ) : (
+              <div className="mobile-toggle mobile-toggle--hub">
+                <button
+                  type="button"
+                  className="mobile-header-back-button"
+                  aria-label={t("home.mobile.backToEditor", "Back to editor")}
+                  onClick={() => leaveMyFiles()}
+                >
+                  <Icon name="chevron-left" size="1.25rem" />
+                </button>
+                <div className="mobile-brand">
+                  <LogoIcon className="mobile-brand-icon" />
+                  <span className="mobile-hub-title">
+                    {t("filesPage.title", "Files & Library")}
+                  </span>
+                </div>
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  className="mobile-hamburger-button"
+                  aria-label={t("home.mobile.toggleMenu", "Toggle navigation menu")}
+                  aria-expanded={mobileMenuOpen}
+                  onClick={() => setMobileMenuOpen((open) => !open)}
+                >
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`} />
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`} />
+                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`} />
+                </button>
               </div>
             )}
             {isWorkspaceHub ? (
@@ -812,6 +878,156 @@ export default function HomePage() {
                     )}
                   </span>
                 )}
+              </div>
+            )}
+            {mobileMenuOpen && (
+              <div
+                className="mobile-drawer-overlay"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div
+                  className="mobile-drawer-menu"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mobile-drawer-header">
+                    <div className="mobile-drawer-brand">
+                      <LogoIcon className="mobile-brand-icon" />
+                      <span className="mobile-drawer-title">Fold</span>
+                      <span className="mobile-drawer-badge">Local &amp; Private</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="mobile-drawer-close"
+                      aria-label={t("home.mobile.closeMenu", "Close menu")}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Icon name="x" size="1.25rem" />
+                    </button>
+                  </div>
+
+                  <nav className="mobile-drawer-links">
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleExit();
+                      }}
+                    >
+                      <Icon name="house" size="1.125rem" />
+                      <span>{t("home.mobile.home", "Home")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${activeMobileView === "tools" ? "is-active" : ""}`}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        leaveMyFiles();
+                        handleBackToTools();
+                        setActiveMobileView("tools");
+                      }}
+                    >
+                      <Icon name="layout-grid" size="1.125rem" />
+                      <span>{t("quickAccess.allTools", "Tools")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${activeMobileView === "workbench" ? "is-active" : ""}`}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        leaveMyFiles();
+                        setActiveMobileView("workbench");
+                      }}
+                    >
+                      <Icon name="file-text" size="1.125rem" />
+                      <span>{t("home.mobile.workspace", "Workspace")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigate("/files");
+                      }}
+                    >
+                      <Icon name="folder" size="1.125rem" />
+                      <span>{t("quickAccess.files", "Files & Library")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        requestNavigation(() => navigate("/open"));
+                      }}
+                    >
+                      <Icon name="monitor" size="1.125rem" />
+                      <span>{t("home.mobile.platforms", "Platforms")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        requestNavigation(() => navigate("/docs"));
+                      }}
+                    >
+                      <Icon name="book-open" size="1.125rem" />
+                      <span>{t("home.mobile.documentation", "Documentation")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openSettings();
+                      }}
+                    >
+                      <Icon name="settings" size="1.125rem" />
+                      <span>{t("quickAccess.config", "Settings")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        requestNavigation(() => navigate("/privacy"));
+                      }}
+                    >
+                      <Icon name="shield-check" size="1.125rem" />
+                      <span>{t("home.mobile.privacy", "Privacy Policy")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-drawer-link"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        requestNavigation(() => navigate("/terms"));
+                      }}
+                    >
+                      <Icon name="scale" size="1.125rem" />
+                      <span>{t("home.mobile.terms", "Terms of Service")}</span>
+                    </button>
+                  </nav>
+
+                  <div className="mobile-drawer-footer">
+                    <button
+                      type="button"
+                      className="mobile-drawer-exit"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleExit();
+                      }}
+                    >
+                      <Icon name="log-out" size="1.125rem" />
+                      <span>{t("sidebar.exitEditor", "Exit Editor")}</span>
+                    </button>
+                    <div className="mobile-drawer-tagline">
+                      <span className="mobile-drawer-dot" />
+                      <span>100% In-Browser · Zero Telemetry</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {mobileNavigation}

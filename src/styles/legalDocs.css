@@ -121,6 +121,132 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.legal-docs-header__back-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: #f0ede6;
+  border: 1px solid rgba(220, 215, 205, 0.8);
+  color: #44403c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.legal-docs-header__back-btn:hover {
+  background: #e7e4dd;
+  color: #171717;
+}
+
+.legal-docs-header__hamburger-btn {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: #f0ede6;
+  border: 1px solid rgba(220, 215, 205, 0.8);
+  padding: 0;
+  gap: 3.5px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.legal-docs-header__hamburger-btn:hover {
+  background: #e7e4dd;
+}
+
+.legal-docs-hamburger-bar {
+  display: block;
+  width: 14px;
+  height: 1.5px;
+  background-color: #171717;
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.legal-docs-hamburger-bar.bar-1-open {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.legal-docs-hamburger-bar.bar-2-open {
+  opacity: 0;
+}
+
+.legal-docs-hamburger-bar.bar-3-open {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+
+@media (max-width: 48rem) {
+  .legal-docs-header__nav {
+    display: none !important;
+  }
+  .legal-docs-header__back-btn {
+    display: flex !important;
+  }
+  .legal-docs-header__hamburger-btn {
+    display: flex !important;
+  }
+}
+
+.legal-docs-mobile-drawer {
+  width: 100%;
+  background: #f5f2eb;
+  border-bottom: 1px solid rgba(229, 224, 216, 0.85);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 3.75rem;
+  z-index: 39;
+  animation: legalDrawerDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes legalDrawerDown {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.legal-docs-mobile-drawer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #57534e;
+}
+
+.legal-docs-mobile-drawer__link {
+  color: #57534e;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  padding: 0.25rem 0;
+}
+
+.legal-docs-mobile-drawer__link:hover {
+  color: #171717;
+}
+
+.legal-docs-mobile-drawer__link.is-active {
+  color: #171717;
+  font-weight: 600;
+}
+
+
 /* ── Main Documentation Shell Layout ─────────────────────────────────────── */
 .legal-docs-layout {
   display: grid;

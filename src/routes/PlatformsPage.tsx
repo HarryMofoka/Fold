@@ -150,26 +150,45 @@ export default function PlatformsPage() {
         className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between relative z-50"
         data-purpose="site-header"
       >
-        {/* Brand Logo */}
-        <a
-          aria-label="Fold Home"
-          className="flex items-center gap-2 group cursor-pointer"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
-          href="/"
-        >
-          <svg
-            className="w-6 h-6 text-black fill-current transform group-hover:rotate-6 transition-transform"
-            viewBox="0 0 24 24"
+        {/* Brand Logo & Mobile Back Button */}
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label="Go back"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/");
+              }
+            }}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-full bg-[#F0EDE6] border border-neutral-200/80 text-neutral-700 hover:bg-neutral-200 hover:text-black transition-colors cursor-pointer"
           >
-            <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z" />
-          </svg>
-          <span className="font-serif text-2xl font-medium tracking-tight text-neutral-900">
-            fold
-          </span>
-        </a>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <a
+            aria-label="Fold Home"
+            className="flex items-center gap-2 group cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/");
+            }}
+            href="/"
+          >
+            <svg
+              className="w-6 h-6 text-black fill-current transform group-hover:rotate-6 transition-transform"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z" />
+            </svg>
+            <span className="font-serif text-2xl font-medium tracking-tight text-neutral-900">
+              fold
+            </span>
+          </a>
+        </div>
 
         {/* Desktop Pill Nav Links */}
         <nav className="hidden md:flex items-center gap-6 px-6 py-2 rounded-full bg-[#F0EDE6]/80 border border-neutral-200/60 text-xs font-medium text-neutral-600">
