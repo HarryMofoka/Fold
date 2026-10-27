@@ -61,13 +61,6 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-6 px-6 py-2 rounded-full bg-[#F0EDE6]/80 border border-neutral-200/60 text-xs font-medium text-neutral-600 backdrop-blur-sm shadow-xs">
           <a
             className="hover:text-black transition-colors cursor-pointer"
-            href="#tools"
-            onClick={(e) => handleNavClick(e, "tools")}
-          >
-            Tools
-          </a>
-          <a
-            className="hover:text-black transition-colors cursor-pointer"
             href="/open"
             onClick={(e) => {
               e.preventDefault();
@@ -160,17 +153,6 @@ export default function LandingPage() {
       {mobileMenuOpen && (
         <div className="md:hidden w-full bg-[#FAF9F6]/98 backdrop-blur-md border-b border-neutral-200/80 px-6 py-5 animate-menu-open shadow-lg relative z-40">
           <div className="flex flex-col gap-3 text-sm font-medium text-neutral-700">
-            <a
-              className="py-1.5 hover:text-black transition-colors cursor-pointer flex items-center justify-between"
-              onClick={(e) => {
-                handleNavClick(e, "tools");
-                setMobileMenuOpen(false);
-              }}
-              href="#tools"
-            >
-              <span>Tools &amp; Features</span>
-              <span className="text-xs text-neutral-400 font-mono">10+</span>
-            </a>
             <a
               className="py-1.5 hover:text-black transition-colors cursor-pointer flex items-center justify-between"
               onClick={(e) => {

@@ -183,16 +183,6 @@ export default function PlatformsPage() {
           >
             Home
           </a>
-          <a
-            className="hover:text-black transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/editor");
-            }}
-            href="/editor"
-          >
-            Tools
-          </a>
           <span className="text-black font-semibold">Platforms</span>
           <a
             className="hover:text-black transition-colors cursor-pointer"
@@ -276,17 +266,6 @@ export default function PlatformsPage() {
               href="/"
             >
               Home
-            </a>
-            <a
-              className="py-1 hover:text-black cursor-pointer"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/editor");
-                setMobileMenuOpen(false);
-              }}
-              href="/editor"
-            >
-              Tools &amp; Editor
             </a>
             <span className="py-1 text-black font-semibold">Platforms</span>
             <a

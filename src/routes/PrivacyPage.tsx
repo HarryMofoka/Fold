@@ -164,16 +164,6 @@ export default function PrivacyPage() {
             className="legal-docs-header__link"
             onClick={(e) => {
               e.preventDefault();
-              navigate(EDITOR_BASENAME);
-            }}
-            href={EDITOR_BASENAME}
-          >
-            Tools
-          </a>
-          <a
-            className="legal-docs-header__link"
-            onClick={(e) => {
-              e.preventDefault();
               navigate("/open");
             }}
             href="/open"
