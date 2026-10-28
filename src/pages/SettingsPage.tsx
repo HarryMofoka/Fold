@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@app/ui/Icon";
+import { ActionIcon } from "@app/ui/ActionIcon";
 import { useTranslation } from "react-i18next";
 import { LoadingFallback } from "@app/components/shared/LoadingFallback";
 import { useSectionHeadings } from "@app/components/settings/useSectionHeadings";
@@ -216,6 +217,16 @@ const SettingsPageInner: React.FC = () => {
         aria-label={t("settings.title", "Settings")}
       >
         <div className="settings-page__nav-head">
+          {isMobile && (
+            <ActionIcon
+              variant="tertiary"
+              onClick={() => void confirmIfDirty().then((ok) => ok && leave())}
+              aria-label={t("common.back", "Back")}
+              className="settings-page__mobile-back-btn"
+            >
+              <Icon name="arrow-left" size="1.25rem" />
+            </ActionIcon>
+          )}
           <span className="settings-page__nav-title">
             {t("settings.title", "Settings")}
           </span>
@@ -360,6 +371,15 @@ const SettingsPageInner: React.FC = () => {
               <span className="settings-page__mobile-bar-title">
                 {activeGroup}
               </span>
+              <div className="settings-page__mobile-bar-spacer" />
+              <ActionIcon
+                variant="tertiary"
+                onClick={() => void confirmIfDirty().then((ok) => ok && leave())}
+                aria-label={t("common.close", "Close")}
+                className="settings-page__mobile-close-btn"
+              >
+                <Icon name="x" size="1.15rem" />
+              </ActionIcon>
             </div>
           )}
           <div className={`modal-body${fullBleed ? " is-full-bleed" : ""}`}>

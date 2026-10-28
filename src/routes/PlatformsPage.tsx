@@ -237,9 +237,10 @@ export default function PlatformsPage() {
 
         {/* Top Right Actions: Web App CTA & Mobile Hamburger */}
         <div className="flex items-center gap-2">
+          {/* On mobile, hidden to preserve header UI space; on desktop, shown */}
           <button
             onClick={handleLaunchWeb}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-black text-white text-xs font-medium tracking-tight hover:bg-neutral-800 transition-all shadow-sm hover:shadow cursor-pointer active-press"
+            className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-black text-white text-xs font-medium tracking-tight hover:bg-neutral-800 transition-all shadow-sm hover:shadow cursor-pointer active-press"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-dot" />
             <span>Launch Web App</span>
@@ -271,12 +272,42 @@ export default function PlatformsPage() {
         </div>
       </header>
 
-      {/* ── Mobile Navigation Drawer ──────────────────────────────────────── */}
+      {/* ── Mobile Full-Screen Liquid Glass Navigation ────────────────────────── */}
       {mobileMenuOpen && (
-        <div className="md:hidden w-full bg-[#F5F2EB] border-b border-neutral-200/80 px-6 py-4 animate-menu-open shadow-md">
-          <div className="flex flex-col gap-3 text-sm font-medium text-neutral-700">
+        <div className="liquid-glass-overlay md:hidden">
+          {/* Top Bar inside Overlay */}
+          <div className="w-full flex items-center justify-between pb-4 border-b border-white/60">
+            <div className="flex items-center gap-2.5">
+              <svg
+                className="w-6 h-6 text-black fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.2L18.2 8 12 11.8 5.8 8 12 4.2zM5.5 9.5l5.5 3.4v7.2L5.5 16.5V9.5zm7.5 10.6v-7.2l5.5-3.4v7l-5.5 3.6z" />
+              </svg>
+              <span className="font-serif text-2xl font-medium tracking-tight text-neutral-900">
+                fold
+              </span>
+              <span className="text-[10px] tracking-wide uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-medium font-mono">
+                Web App
+              </span>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/70 border border-white/90 text-neutral-800 shadow-xs cursor-pointer active-press hover:bg-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Navigation Links in Liquid Glass Cards */}
+          <div className="flex-1 flex flex-col justify-center py-6 gap-3">
             <a
-              className="py-1 hover:text-black cursor-pointer"
+              className="liquid-glass-item"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/");
@@ -284,11 +315,27 @@ export default function PlatformsPage() {
               }}
               href="/"
             >
-              Home
+              <span className="flex items-center gap-3">
+                <span className="text-xs font-mono text-neutral-400">01</span>
+                <span>Home</span>
+              </span>
+              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
-            <span className="py-1 text-black font-semibold">Platforms</span>
+
+            <div className="liquid-glass-item bg-white/80 border-white font-semibold">
+              <span className="flex items-center gap-3">
+                <span className="text-xs font-mono text-neutral-500">02</span>
+                <span className="text-black">Platforms &amp; OS</span>
+              </span>
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
+                Active
+              </span>
+            </div>
+
             <a
-              className="py-1 hover:text-black cursor-pointer"
+              className="liquid-glass-item"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/docs");
@@ -296,10 +343,17 @@ export default function PlatformsPage() {
               }}
               href="/docs"
             >
-              Docs
+              <span className="flex items-center gap-3">
+                <span className="text-xs font-mono text-neutral-400">03</span>
+                <span>Documentation</span>
+              </span>
+              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
+
             <a
-              className="py-1 hover:text-black cursor-pointer"
+              className="liquid-glass-item"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/privacy");
@@ -307,10 +361,17 @@ export default function PlatformsPage() {
               }}
               href="/privacy"
             >
-              Privacy Policy
+              <span className="flex items-center gap-3">
+                <span className="text-xs font-mono text-neutral-400">04</span>
+                <span>Privacy Architecture</span>
+              </span>
+              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
+
             <a
-              className="py-1 hover:text-black cursor-pointer"
+              className="liquid-glass-item"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/terms");
@@ -318,18 +379,34 @@ export default function PlatformsPage() {
               }}
               href="/terms"
             >
-              Terms of Service
+              <span className="flex items-center gap-3">
+                <span className="text-xs font-mono text-neutral-400">05</span>
+                <span>Terms of Service</span>
+              </span>
+              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
+          </div>
+
+          {/* Bottom Action: Launch Web App */}
+          <div className="w-full pt-4 border-t border-white/50 flex flex-col gap-2.5">
             <button
               onClick={() => {
-                handleLaunchWeb();
                 setMobileMenuOpen(false);
+                handleLaunchWeb();
               }}
-              className="mt-2 w-full py-2.5 rounded-full bg-black text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow"
+              className="w-full py-4 rounded-2xl bg-neutral-900 text-white font-medium text-sm flex items-center justify-center gap-2.5 shadow-lg active-press cursor-pointer hover:bg-black transition-colors"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-dot" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse-dot" />
               <span>Launch Web App</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
             </button>
+            <p className="text-center text-[11px] text-neutral-500 font-mono">
+              Zero server uploads · 100% Client-Side WebAssembly
+            </p>
           </div>
         </div>
       )}
