@@ -126,26 +126,9 @@ labels:
       - "scripts/counter_translation.py"
       - "scripts/ignore_translation.toml"
 
-  - label: "Docker"
-    files:
-      - ".github/workflows/build.yml"
-      - ".github/workflows/push-docker.yml"
-      - "Dockerfile"
-      - "Dockerfile.fat"
-      - "Dockerfile.ultra-lite"
-      - "exampleYmlFiles/.*.yml"
-      - "scripts/download-security-jar.sh"
-      - "scripts/init.sh"
-      - "scripts/init-without-ocr.sh"
-      - "scripts/installFonts.sh"
-      - "test.sh"
-      - "test2.sh"
-      - "docker/**"
-
   - label: "Devtools"
     files:
       - ".devcontainer/.*"
-      - "Dockerfile.dev"
       - ".vscode/.*"
       - ".editorconfig"
       - ".pre-commit-config"

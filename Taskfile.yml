@@ -12,9 +12,6 @@ includes:
   frontend:
     taskfile: .taskfiles/frontend.yml
     dir: frontend
-  docker:
-    taskfile: .taskfiles/docker.yml
-    dir: .
   desktop:
     taskfile: .taskfiles/desktop.yml
     dir: frontend
