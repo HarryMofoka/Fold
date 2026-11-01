@@ -1,26 +1,101 @@
 import { Peer, type DataConnection } from "peerjs";
 
-export interface TransferPayload {
-  type: "PING" | "PONG" | "FILE" | "ACK";
-  name?: string;
-  mimeType?: string;
-  buffer?: ArrayBuffer;
-}
+export const CHUNK_SIZE = 16384; // 16 KB standard SCTP packet size
 
-function getSafePeerId(sessionId: string): string {
+export type TransferStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
+
+export type TransferMessage =
+  | { type: "PING" }
+  | { type: "PONG" }
+  | {
+      type: "FILE_START";
+      transferId: string;
+      name: string;
+      mimeType: string;
+      totalBytes: number;
+      totalChunks: number;
+    }
+  | {
+      type: "FILE_CHUNK";
+      transferId: string;
+      chunkIndex: number;
+      data: ArrayBuffer;
+    }
+  | {
+      type: "FILE_END";
+      transferId: string;
+    }
+  | {
+      type: "FILE_ACK";
+      transferId: string;
+      name: string;
+    }
+  | {
+      type: "FILE";
+      name?: string;
+      mimeType?: string;
+      buffer?: ArrayBuffer;
+    }
+  | {
+      type: "ACK";
+      name?: string;
+    };
+
+export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun.cloudflare.com:3478" },
+  {
+    urls: "turn:openrelay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: "turn:openrelay.metered.ca:443",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: "turn:openrelay.metered.ca:443?transport=tcp",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
+export function getSafePeerId(sessionId: string): string {
   const clean = sessionId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
   return `fold-sess-${clean}`;
 }
 
-function getChannelName(sessionId: string): string {
+export function getChannelName(sessionId: string): string {
   return `fold-transfer-${sessionId}`;
+}
+
+interface PendingTransfer {
+  transferId: string;
+  name: string;
+  mimeType: string;
+  totalBytes: number;
+  totalChunks: number;
+  receivedChunks: Map<number, ArrayBuffer>;
+  receivedBytes: number;
+  timeoutId: ReturnType<typeof setTimeout>;
 }
 
 export class MobileTransferHost {
   private peer: Peer | null = null;
   private channel: BroadcastChannel | null = null;
   private connections = new Set<DataConnection>();
+  private pendingTransfers = new Map<string, PendingTransfer>();
+  private connectionChangeListeners = new Set<(connected: boolean) => void>();
   private closed = false;
+  private isDeviceConnected = false;
+  private reinitTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private sessionId: string,
@@ -30,7 +105,6 @@ export class MobileTransferHost {
   }
 
   private init() {
-    // 1. BroadcastChannel for instant same-browser / multi-tab transfer
     if (typeof BroadcastChannel !== "undefined") {
       try {
         this.channel = new BroadcastChannel(getChannelName(this.sessionId));
@@ -38,58 +112,97 @@ export class MobileTransferHost {
           this.handlePayload(event.data);
         };
       } catch {
-        // BroadcastChannel unavailable in this environment
+        // BroadcastChannel unavailable
       }
     }
 
-    // 2. PeerJS WebRTC DataChannel for cross-device P2P transfer
+    this.initPeer();
+  }
+
+  private initPeer() {
+    if (this.closed) return;
+
     try {
       const peerId = getSafePeerId(this.sessionId);
       this.peer = new Peer(peerId, {
         debug: 0,
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478" },
-          ],
-        },
+        config: { iceServers: DEFAULT_ICE_SERVERS },
       });
+
+      this.peer.on("open", () => {});
 
       this.peer.on("connection", (conn) => {
         this.connections.add(conn);
 
         conn.on("open", () => {
-          conn.send({ type: "PONG" });
+          this.setDeviceConnected(true);
+          try {
+            conn.send({ type: "PONG" });
+          } catch {}
         });
 
         conn.on("data", (data) => {
-          this.handlePayload(data as TransferPayload, conn);
+          this.handlePayload(data as TransferMessage, conn);
         });
 
         conn.on("close", () => {
           this.connections.delete(conn);
+          if (this.connections.size === 0) {
+            this.setDeviceConnected(false);
+          }
         });
 
         conn.on("error", () => {
           this.connections.delete(conn);
+          if (this.connections.size === 0) {
+            this.setDeviceConnected(false);
+          }
         });
       });
 
-      this.peer.on("error", () => {
-        // Peer error handled silently
+      this.peer.on("disconnected", () => {
+        if (!this.closed) {
+          try {
+            this.peer?.reconnect();
+          } catch {}
+        }
+      });
+
+      this.peer.on("error", (err: { type?: string }) => {
+        if (err?.type === "unavailable-id" && !this.closed) {
+          if (this.reinitTimer) clearTimeout(this.reinitTimer);
+          this.reinitTimer = setTimeout(() => {
+            if (!this.closed && (!this.peer || !this.peer.open)) {
+              this.initPeer();
+            }
+          }, 1500);
+        }
       });
     } catch {
-      // PeerJS unavailable or WebRTC disabled
+      // PeerJS initialization failed
     }
   }
 
-  private handlePayload(payload: TransferPayload, conn?: DataConnection) {
+  private setDeviceConnected(connected: boolean) {
+    if (this.isDeviceConnected === connected) return;
+    this.isDeviceConnected = connected;
+    for (const listener of this.connectionChangeListeners) {
+      try {
+        listener(connected);
+      } catch {}
+    }
+  }
+
+  private handlePayload(payload: TransferMessage, conn?: DataConnection) {
     if (!payload || this.closed) return;
 
     if (payload.type === "PING") {
-      const pong: TransferPayload = { type: "PONG" };
+      this.setDeviceConnected(true);
+      const pong: TransferMessage = { type: "PONG" };
       if (conn && conn.open) {
-        conn.send(pong);
+        try {
+          conn.send(pong);
+        } catch {}
       }
       if (this.channel) {
         try {
@@ -99,6 +212,73 @@ export class MobileTransferHost {
       return;
     }
 
+    if (payload.type === "FILE_START") {
+      const pending: PendingTransfer = {
+        transferId: payload.transferId,
+        name: payload.name || `mobile-upload-${Date.now()}.jpg`,
+        mimeType: payload.mimeType || "image/jpeg",
+        totalBytes: payload.totalBytes,
+        totalChunks: payload.totalChunks,
+        receivedChunks: new Map(),
+        receivedBytes: 0,
+        timeoutId: setTimeout(() => {
+          this.pendingTransfers.delete(payload.transferId);
+        }, 60000),
+      };
+      this.pendingTransfers.set(payload.transferId, pending);
+      return;
+    }
+
+    if (payload.type === "FILE_CHUNK") {
+      const pending = this.pendingTransfers.get(payload.transferId);
+      if (!pending) return;
+
+      pending.receivedChunks.set(payload.chunkIndex, payload.data);
+      pending.receivedBytes += payload.data.byteLength;
+      return;
+    }
+
+    if (payload.type === "FILE_END") {
+      const pending = this.pendingTransfers.get(payload.transferId);
+      if (!pending) return;
+
+      clearTimeout(pending.timeoutId);
+      this.pendingTransfers.delete(payload.transferId);
+
+      if (pending.receivedChunks.size === pending.totalChunks) {
+        const parts: ArrayBuffer[] = [];
+        for (let i = 0; i < pending.totalChunks; i++) {
+          const chunk = pending.receivedChunks.get(i);
+          if (chunk) parts.push(chunk);
+        }
+
+        const file = new File(parts, pending.name, {
+          type: pending.mimeType,
+        });
+
+        void this.onFileReceived(file);
+
+        const ack: TransferMessage = {
+          type: "FILE_ACK",
+          transferId: pending.transferId,
+          name: pending.name,
+        };
+
+        if (conn && conn.open) {
+          try {
+            conn.send(ack);
+          } catch {}
+        }
+        if (this.channel) {
+          try {
+            this.channel.postMessage(ack);
+          } catch {}
+        }
+      }
+      return;
+    }
+
+    // Legacy unchunked fallback
     if (payload.type === "FILE" && payload.buffer) {
       const filename = payload.name || `mobile-upload-${Date.now()}.jpg`;
       const mimeType = payload.mimeType || "image/jpeg";
@@ -106,9 +286,11 @@ export class MobileTransferHost {
 
       void this.onFileReceived(file);
 
-      const ack: TransferPayload = { type: "ACK", name: filename };
+      const ack: TransferMessage = { type: "ACK", name: filename };
       if (conn && conn.open) {
-        conn.send(ack);
+        try {
+          conn.send(ack);
+        } catch {}
       }
       if (this.channel) {
         try {
@@ -118,14 +300,40 @@ export class MobileTransferHost {
     }
   }
 
+  public onConnectionChange(
+    callback: (connected: boolean) => void,
+  ): () => void {
+    this.connectionChangeListeners.add(callback);
+    callback(this.isDeviceConnected);
+    return () => {
+      this.connectionChangeListeners.delete(callback);
+    };
+  }
+
+  public isConnected(): boolean {
+    return this.isDeviceConnected;
+  }
+
   public close() {
     this.closed = true;
+
+    if (this.reinitTimer) {
+      clearTimeout(this.reinitTimer);
+      this.reinitTimer = null;
+    }
+
+    for (const pending of this.pendingTransfers.values()) {
+      clearTimeout(pending.timeoutId);
+    }
+    this.pendingTransfers.clear();
+
     for (const conn of this.connections) {
       try {
         conn.close();
       } catch {}
     }
     this.connections.clear();
+    this.connectionChangeListeners.clear();
 
     if (this.channel) {
       try {
@@ -147,156 +355,294 @@ export class MobileTransferClient {
   private peer: Peer | null = null;
   private conn: DataConnection | null = null;
   private channel: BroadcastChannel | null = null;
-  private onConnectedCallbacks = new Set<() => void>();
-  private ackResolvers = new Map<string, () => void>();
-  private isReady = false;
+  private status: TransferStatus = "connecting";
+  private statusListeners = new Set<(status: TransferStatus) => void>();
+  private fileAckResolvers = new Map<string, () => void>();
+  private legacyAckResolvers = new Map<string, () => void>();
   private closed = false;
+  private connectAttempts = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private sessionId: string) {
     this.init();
   }
 
   private init() {
-    // 1. BroadcastChannel
     if (typeof BroadcastChannel !== "undefined") {
       try {
         this.channel = new BroadcastChannel(getChannelName(this.sessionId));
         this.channel.onmessage = (event) => {
           this.handlePayload(event.data);
         };
-      } catch {}
-    }
-
-    // 2. PeerJS
-    try {
-      this.peer = new Peer({
-        debug: 0,
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478" },
-          ],
-        },
-      });
-
-      this.peer.on("open", () => {
-        if (this.closed || !this.peer) return;
-        const hostId = getSafePeerId(this.sessionId);
-        const connection = this.peer.connect(hostId, { reliable: true });
-
-        connection.on("open", () => {
-          this.conn = connection;
-          this.setConnected();
-        });
-
-        connection.on("data", (data) => {
-          this.handlePayload(data as TransferPayload);
-        });
-
-        connection.on("close", () => {
-          if (this.conn === connection) this.conn = null;
-        });
-      });
-
-      this.peer.on("error", () => {
-        // Fallback remains active
-      });
-    } catch {}
-
-    // Same-device ping via BroadcastChannel
-    if (this.channel) {
-      try {
         this.channel.postMessage({ type: "PING" });
       } catch {}
     }
+
+    try {
+      this.peer = new Peer({
+        debug: 0,
+        config: { iceServers: DEFAULT_ICE_SERVERS },
+      });
+
+      this.peer.on("open", () => {
+        this.connectToHost();
+      });
+
+      this.peer.on("disconnected", () => {
+        if (!this.closed) {
+          try {
+            this.peer?.reconnect();
+          } catch {}
+        }
+      });
+
+      this.peer.on("error", (err: { type?: string }) => {
+        if (
+          err?.type === "peer-unavailable" &&
+          !this.closed &&
+          this.connectAttempts < 20
+        ) {
+          this.scheduleRetry(2000);
+        }
+      });
+    } catch {
+      this.setStatus("error");
+    }
   }
 
-  private handlePayload(payload: TransferPayload) {
+  private connectToHost() {
+    if (this.closed || !this.peer || this.peer.destroyed) return;
+    this.connectAttempts++;
+    const hostId = getSafePeerId(this.sessionId);
+
+    try {
+      const conn = this.peer.connect(hostId, { reliable: true });
+
+      conn.on("open", () => {
+        this.conn = conn;
+        this.setStatus("connected");
+        try {
+          conn.send({ type: "PING" });
+        } catch {}
+      });
+
+      conn.on("data", (data) => {
+        this.handlePayload(data as TransferMessage);
+      });
+
+      conn.on("close", () => {
+        if (this.conn === conn) {
+          this.conn = null;
+          if (!this.closed) {
+            this.setStatus("disconnected");
+            this.scheduleRetry(2500);
+          }
+        }
+      });
+
+      conn.on("error", () => {
+        if (this.conn === conn) {
+          this.conn = null;
+          if (!this.closed) {
+            this.scheduleRetry(2500);
+          }
+        }
+      });
+    } catch {
+      this.scheduleRetry(3000);
+    }
+  }
+
+  private scheduleRetry(delayMs: number) {
+    if (this.closed || (this.conn && this.conn.open)) return;
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = setTimeout(() => {
+      if (!this.closed && (!this.conn || !this.conn.open)) {
+        this.connectToHost();
+      }
+    }, delayMs);
+  }
+
+  private handlePayload(payload: TransferMessage) {
     if (!payload || this.closed) return;
 
     if (payload.type === "PONG") {
-      this.setConnected();
+      this.setStatus("connected");
+      return;
+    }
+
+    if (payload.type === "FILE_ACK" && payload.transferId) {
+      const resolver = this.fileAckResolvers.get(payload.transferId);
+      if (resolver) {
+        resolver();
+        this.fileAckResolvers.delete(payload.transferId);
+      }
       return;
     }
 
     if (payload.type === "ACK" && payload.name) {
-      const resolver = this.ackResolvers.get(payload.name);
+      const resolver = this.legacyAckResolvers.get(payload.name);
       if (resolver) {
         resolver();
-        this.ackResolvers.delete(payload.name);
+        this.legacyAckResolvers.delete(payload.name);
       }
     }
   }
 
-  private setConnected() {
-    if (this.isReady) return;
-    this.isReady = true;
-    for (const cb of this.onConnectedCallbacks) {
+  private setStatus(status: TransferStatus) {
+    if (this.status === status) return;
+    this.status = status;
+    for (const cb of this.statusListeners) {
       try {
-        cb();
+        cb(status);
       } catch {}
     }
-    this.onConnectedCallbacks.clear();
   }
 
-  public onConnected(callback: () => void) {
-    if (this.isReady) {
-      callback();
-    } else {
-      this.onConnectedCallbacks.add(callback);
-    }
+  public getStatus(): TransferStatus {
+    return this.status;
+  }
+
+  public onStatusChange(callback: (status: TransferStatus) => void): () => void {
+    this.statusListeners.add(callback);
+    callback(this.status);
+    return () => {
+      this.statusListeners.delete(callback);
+    };
   }
 
   public isConnected(): boolean {
-    return this.isReady || (this.conn !== null && this.conn.open);
+    return (
+      this.status === "connected" || Boolean(this.conn && this.conn.open)
+    );
   }
 
-  public async sendFile(file: File): Promise<boolean> {
-    const buffer = await file.arrayBuffer();
-    const payload: TransferPayload = {
-      type: "FILE",
-      name: file.name,
-      mimeType: file.type,
-      buffer,
-    };
+  public async waitForConnection(timeoutMs = 10000): Promise<boolean> {
+    if (this.isConnected()) return true;
 
-    let delivered = false;
+    return new Promise<boolean>((resolve) => {
+      let resolved = false;
 
-    // Send across WebRTC DataConnection
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          this.statusListeners.delete(onStatus);
+          resolve(this.isConnected());
+        }
+      }, timeoutMs);
+
+      const onStatus = (status: TransferStatus) => {
+        if (status === "connected" && !resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          this.statusListeners.delete(onStatus);
+          resolve(true);
+        }
+      };
+
+      this.statusListeners.add(onStatus);
+    });
+  }
+
+  private async waitForBufferDrain(dc?: RTCDataChannel) {
+    if (!dc) return;
+    while (dc.bufferedAmount > 64 * 1024) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
+  private sendRaw(msg: TransferMessage) {
     if (this.conn && this.conn.open) {
       try {
-        this.conn.send(payload);
-        delivered = true;
+        this.conn.send(msg);
       } catch {}
     }
-
-    // Send across BroadcastChannel
     if (this.channel) {
       try {
-        this.channel.postMessage(payload);
-        delivered = true;
+        this.channel.postMessage(msg);
       } catch {}
     }
+  }
 
-    if (delivered) {
-      // Wait briefly for ACK, or consider sent after delay
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(resolve, 800);
-        this.ackResolvers.set(file.name, () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
-      return true;
+  public async sendFile(
+    file: File,
+    onProgress?: (percent: number) => void,
+  ): Promise<boolean> {
+    const isReady = await this.waitForConnection(8000);
+    if (!isReady && !this.channel) {
+      return false;
     }
 
-    return false;
+    const buffer = await file.arrayBuffer();
+    const totalBytes = buffer.byteLength;
+    const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
+    const transferId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    const ackPromise = new Promise<boolean>((resolve) => {
+      const timeout = setTimeout(() => {
+        this.fileAckResolvers.delete(transferId);
+        resolve(false);
+      }, 30000);
+
+      this.fileAckResolvers.set(transferId, () => {
+        clearTimeout(timeout);
+        resolve(true);
+      });
+    });
+
+    const startMsg: TransferMessage = {
+      type: "FILE_START",
+      transferId,
+      name: file.name,
+      mimeType: file.type || "image/jpeg",
+      totalBytes,
+      totalChunks,
+    };
+    this.sendRaw(startMsg);
+
+    const dc = (this.conn as unknown as { dataChannel?: RTCDataChannel })
+      ?.dataChannel;
+
+    for (let i = 0; i < totalChunks; i++) {
+      if (this.closed) return false;
+
+      await this.waitForBufferDrain(dc);
+
+      const startByte = i * CHUNK_SIZE;
+      const endByte = Math.min(startByte + CHUNK_SIZE, totalBytes);
+      const chunk = buffer.slice(startByte, endByte);
+
+      const chunkMsg: TransferMessage = {
+        type: "FILE_CHUNK",
+        transferId,
+        chunkIndex: i,
+        data: chunk,
+      };
+      this.sendRaw(chunkMsg);
+
+      if (onProgress) {
+        onProgress(Math.round(((i + 1) / totalChunks) * 100));
+      }
+    }
+
+    const endMsg: TransferMessage = {
+      type: "FILE_END",
+      transferId,
+    };
+    this.sendRaw(endMsg);
+
+    return ackPromise;
   }
 
   public close() {
     this.closed = true;
-    this.ackResolvers.clear();
-    this.onConnectedCallbacks.clear();
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    this.fileAckResolvers.clear();
+    this.legacyAckResolvers.clear();
+    this.statusListeners.clear();
 
     if (this.conn) {
       try {
@@ -322,7 +668,10 @@ export class MobileTransferClient {
 }
 
 export const mobileTransferService = {
-  host(sessionId: string, onFileReceived: (file: File) => void | Promise<void>): MobileTransferHost {
+  host(
+    sessionId: string,
+    onFileReceived: (file: File) => void | Promise<void>,
+  ): MobileTransferHost {
     return new MobileTransferHost(sessionId, onFileReceived);
   },
 
@@ -330,4 +679,3 @@ export const mobileTransferService = {
     return new MobileTransferClient(sessionId);
   },
 };
-

@@ -26,6 +26,7 @@ import { fitThumbs, THUMB_GAP } from "@app/utils/mobileScannerThumbs";
 import {
   mobileTransferService,
   type MobileTransferClient,
+  type TransferStatus,
 } from "@app/services/mobileTransferService";
 
 const API_BASE = (apiClient.defaults.baseURL ?? "").replace(/\/+$/, "");
@@ -87,6 +88,8 @@ export default function MobileScannerPage() {
   const [sessionValid, setSessionValid] = useState<boolean | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<TransferStatus>("connecting");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -101,12 +104,19 @@ export default function MobileScannerPage() {
 
   useEffect(() => {
     if (sessionId) {
-      transferClientRef.current = mobileTransferService.connect(sessionId);
+      const client = mobileTransferService.connect(sessionId);
+      transferClientRef.current = client;
+
+      const unsubscribe = client.onStatusChange((status) => {
+        setConnectionStatus(status);
+      });
+
+      return () => {
+        unsubscribe();
+        client.close();
+        transferClientRef.current = null;
+      };
     }
-    return () => {
-      transferClientRef.current?.close();
-      transferClientRef.current = null;
-    };
   }, [sessionId]);
 
   useEffect(() => {
@@ -785,20 +795,36 @@ export default function MobileScannerPage() {
           type: "image/jpeg",
         });
         files.push(file);
-        setUploadProgress(((i + 1) / (imagesToUpload.length + 1)) * 50);
       }
 
       let delivered = false;
 
-      // 1. Send via WebRTC DataChannel / BroadcastChannel directly to desktop
       if (transferClientRef.current) {
-        for (const file of files) {
-          const ok = await transferClientRef.current.sendFile(file);
-          if (ok) delivered = true;
+        const isConnected = await transferClientRef.current.waitForConnection(8000);
+        if (isConnected || transferClientRef.current.isConnected()) {
+          let allSuccess = true;
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const ok = await transferClientRef.current.sendFile(
+              file,
+              (filePct) => {
+                const totalPct = Math.round(
+                  ((i + filePct / 100) / files.length) * 100,
+                );
+                setUploadProgress(totalPct);
+              },
+            );
+            if (!ok) {
+              allSuccess = false;
+              break;
+            }
+          }
+          if (allSuccess) {
+            delivered = true;
+          }
         }
       }
 
-      // 2. If a backend server is running or P2P is not yet established, send via HTTP
       if (!delivered && API_BASE) {
         try {
           const formData = new FormData();
@@ -814,16 +840,25 @@ export default function MobileScannerPage() {
             },
           );
 
-          if (uploadResponse.ok) {
-            delivered = true;
+          const contentType = uploadResponse.headers.get("content-type") || "";
+          if (uploadResponse.ok && contentType.includes("application/json")) {
+            const json = await uploadResponse.json();
+            if (json.success || (json.count && json.count > 0)) {
+              delivered = true;
+            }
           }
         } catch {
           // Fallback failed
         }
       }
 
-      if (!delivered && !transferClientRef.current) {
-        throw new Error("Upload failed");
+      if (!delivered) {
+        throw new Error(
+          t(
+            "mobileScanner.deliveryFailed",
+            "Could not connect to PC. Please ensure the QR code modal is open on your PC and try again.",
+          ),
+        );
       }
 
       setUploadProgress(100);
@@ -833,7 +868,9 @@ export default function MobileScannerPage() {
     } catch (err) {
       console.error("Upload failed:", err);
       setUploadError(
-        t("mobileScanner.uploadFailed", "Upload failed. Please try again."),
+        err instanceof Error
+          ? err.message
+          : t("mobileScanner.uploadFailed", "Upload failed. Please try again."),
       );
     } finally {
       setIsUploading(false);
@@ -1014,12 +1051,39 @@ export default function MobileScannerPage() {
             borderBottom: "1px solid var(--c-border-subtle)",
           }}
         >
-          <Group gap="sm" align="center" wrap="nowrap">
-            <LogoIcon
-              alt={t("home.mobile.brandAlt", "Fold logo")}
-              style={{ height: FLUID.logo, width: FLUID.logo }}
-            />
-            <Wordmark alt="Fold" style={{ height: FLUID.wordmark }} />
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Group gap="sm" align="center" wrap="nowrap">
+              <LogoIcon
+                alt={t("home.mobile.brandAlt", "Fold logo")}
+                style={{ height: FLUID.logo, width: FLUID.logo }}
+              />
+              <Wordmark alt="Fold" style={{ height: FLUID.wordmark }} />
+            </Group>
+            <Group gap={6} align="center" wrap="nowrap">
+              <Box
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor:
+                    connectionStatus === "connected"
+                      ? "var(--mantine-color-green-6)"
+                      : connectionStatus === "connecting"
+                        ? "var(--mantine-color-yellow-6)"
+                        : "var(--mantine-color-gray-5)",
+                }}
+              />
+              <Text
+                size="xs"
+                c={connectionStatus === "connected" ? "green" : "dimmed"}
+              >
+                {connectionStatus === "connected"
+                  ? t("mobileScanner.connectedToPc", "Connected")
+                  : connectionStatus === "connecting"
+                    ? t("mobileScanner.connectingToPc", "Connecting…")
+                    : t("mobileScanner.waitingForPc", "Offline")}
+              </Text>
+            </Group>
           </Group>
         </Box>
       )}

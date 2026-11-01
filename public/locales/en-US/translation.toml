@@ -6108,12 +6108,20 @@ sessionNotFound = "Session not found. Please refresh and try again."
 sessionValidationError = "Unable to verify session. Please try again."
 startingCamera = "Starting camera…"
 title = "Mobile Scanner"
+connectedToPc = "Connected to PC"
+connectingToPc = "Connecting to PC…"
+waitingForPc = "Waiting for PC…"
+deliveryFailed = "Could not deliver to PC. Please ensure the QR code modal is open on your PC and try again."
 uploadFailed = "Upload failed. Please try again."
 uploading = "Uploading..."
 uploadSuccess = "Upload Successful!"
 uploadSuccessMessage = "Your images have been transferred."
 uploadWithCount = "Upload ({{total}})"
 validating = "Validating session..."
+
+[mobileTransfer]
+deviceConnected = "Phone connected"
+waitingForScan = "Waiting for phone scan"
 
 [mobileSign]
 clear = "Clear"

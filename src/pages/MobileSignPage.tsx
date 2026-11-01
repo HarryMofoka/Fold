@@ -223,6 +223,7 @@ export default function MobileSignPage() {
       let delivered = false;
 
       if (transferClientRef.current) {
+        await transferClientRef.current.waitForConnection(6000);
         const file = new File([upload.blob], upload.filename, {
           type: upload.blob.type || "image/png",
         });
@@ -230,17 +231,29 @@ export default function MobileSignPage() {
         if (ok) delivered = true;
       }
 
-      if (!delivered) {
-        const formData = new FormData();
-        formData.append("files", upload.blob, upload.filename);
+      if (!delivered && API_BASE) {
+        try {
+          const formData = new FormData();
+          formData.append("files", upload.blob, upload.filename);
 
-        const response = await fetch(
-          `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
-          { method: "POST", body: formData },
-        );
-        if (!response.ok) {
-          throw new Error(`Upload failed with status ${response.status}`);
+          const response = await fetch(
+            `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
+            { method: "POST", body: formData },
+          );
+          const contentType = response.headers.get("content-type") || "";
+          if (response.ok && contentType.includes("application/json")) {
+            const json = await response.json();
+            if (json.success || (json.count && json.count > 0)) {
+              delivered = true;
+            }
+          }
+        } catch {
+          // Fallback failed
         }
+      }
+
+      if (!delivered) {
+        throw new Error("Could not deliver signature to desktop");
       }
 
       setSentCount((count) => count + 1);

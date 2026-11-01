@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
-import { Modal, Stack, Text, Box, Alert } from "@mantine/core";
+import { Modal, Stack, Text, Box, Alert, Badge } from "@mantine/core";
 import { QRCodeSVG } from "qrcode.react";
 import { Icon } from "@app/ui/Icon";
 import { Z_INDEX_OVER_FILE_MANAGER_MODAL } from "@app/styles/zIndex";
 import { useMobileTransferSession } from "@app/hooks/useMobileTransferSession";
+import { useTranslation } from "react-i18next";
 
 /**
  * The QR modal shell every phone-to-desktop transfer feature shares: session
@@ -53,14 +54,21 @@ export default function MobileTransferModal({
   qrTitle = title,
   qrSize = 240,
 }: MobileTransferModalProps) {
-  const { mobileUrl, filesReceived, error, timeRemaining, showExpiryWarning } =
-    useMobileTransferSession({
-      active: opened,
-      routePath,
-      onFileReceived,
-      sessionCreateErrorMessage,
-      pollingErrorMessage,
-    });
+  const { t } = useTranslation();
+  const {
+    mobileUrl,
+    filesReceived,
+    error,
+    timeRemaining,
+    showExpiryWarning,
+    isDeviceConnected,
+  } = useMobileTransferSession({
+    active: opened,
+    routePath,
+    onFileReceived,
+    sessionCreateErrorMessage,
+    pollingErrorMessage,
+  });
 
   return (
     <Modal
@@ -129,6 +137,26 @@ export default function MobileTransferModal({
               title={qrTitle}
             />
           </Box>
+
+          {isDeviceConnected ? (
+            <Badge
+              variant="filled"
+              color="green"
+              size="md"
+              leftSection={<Icon name="check" size="0.9rem" />}
+            >
+              {t("mobileTransfer.deviceConnected", "Phone connected")}
+            </Badge>
+          ) : (
+            <Badge
+              variant="light"
+              color="gray"
+              size="sm"
+              leftSection={<Icon name="scan" size="0.85rem" />}
+            >
+              {t("mobileTransfer.waitingForScan", "Scan code with phone camera")}
+            </Badge>
+          )}
 
           {filesReceived > 0 && renderReceived?.(filesReceived)}
 

@@ -85,6 +85,7 @@ export function useMobileTransferSession({
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+  const [isDeviceConnected, setIsDeviceConnected] = useState(false);
   const pollIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
   const processedFiles = useRef<Set<string>>(new Set());
@@ -225,8 +226,14 @@ export function useMobileTransferSession({
       await onFileReceived(file);
     });
 
+    const unsubscribe = host.onConnectionChange((connected) => {
+      setIsDeviceConnected(connected);
+    });
+
     return () => {
+      unsubscribe();
       host.close();
+      setIsDeviceConnected(false);
     };
   }, [active, sessionId, onFileReceived]);
 
@@ -287,5 +294,7 @@ export function useMobileTransferSession({
     /** True inside the final minute before expiry. */
     showExpiryWarning,
     regenerateSession,
+    /** True when a mobile device is connected via P2P. */
+    isDeviceConnected,
   };
 }
