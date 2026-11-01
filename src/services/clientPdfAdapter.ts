@@ -530,6 +530,14 @@ export async function handleClientApiRequest(
     if (url.includes("/misc/show-javascript")) {
       if (!primaryFile) throw new Error("No file provided for JS inspection.");
       const jsInfo = await ClientPdfEngine.showJavascript(primaryFile);
+      if (config.responseType === "text") {
+        return makeResponse(
+          config,
+          jsInfo.scriptText,
+          `${primaryFile.name.replace(/\.[^/.]+$/, "")}.js`,
+          "application/javascript",
+        );
+      }
       return makeResponse(config, jsInfo, "js_report.json", "application/json");
     }
 
@@ -1107,13 +1115,20 @@ export async function handleClientApiRequest(
     if (url.includes("/ai/tools/classify-and-label")) {
       if (!primaryFile)
         throw new Error("No file provided for classification.");
-      const updatedBytes = await ClientPdfEngine.updateMetadata(primaryFile, {
-        subject: "Classified: Document",
-      });
+      const classification =
+        await ClientPdfEngine.classifyDocument(primaryFile);
       return makeResponse(
         config,
-        updatedBytes,
+        classification.data,
         `classified_${primaryFile.name}`,
+        "application/pdf",
+        200,
+        {
+          "x-stirling-classification-labels": JSON.stringify(
+            classification.labels,
+          ),
+          "x-stirling-classification-confidence": classification.confidence,
+        },
       );
     }
 

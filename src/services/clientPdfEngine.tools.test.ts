@@ -580,4 +580,82 @@ describe("ClientPdfAdapter Endpoints", () => {
     const doc = await PDFDocument.load(cleaned);
     expect(doc.getPageCount()).toBe(2);
   });
+
+  test("showJavascript extracts embedded JavaScript code", async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([400, 400]);
+    const jsAction = doc.context.obj({
+      Type: "Action",
+      S: "JavaScript",
+      JS: "console.println('Security Audit Complete');",
+    });
+    doc.catalog.set(PDFName.of("OpenAction"), doc.context.register(jsAction));
+    const bytes = await doc.save();
+    const file = new File([bytes], "js_doc.pdf", { type: "application/pdf" });
+
+    const report = await ClientPdfEngine.showJavascript(file);
+    expect(report.hasJs).toBe(true);
+    expect(report.scripts.length).toBeGreaterThan(0);
+    expect(report.scriptText).toContain("Security Audit Complete");
+
+    // Test text response format
+    const formData = new FormData();
+    formData.append("fileInput", file);
+    const config: InternalAxiosRequestConfig = {
+      url: "/api/v1/misc/show-javascript",
+      method: "post",
+      data: formData,
+      responseType: "text",
+      headers: {} as any,
+    };
+    const res = await handleClientApiRequest(config);
+    expect(res?.status).toBe(200);
+    expect(res?.data).toContain("Security Audit Complete");
+  });
+
+  test("classifyDocument identifies document category and updates metadata", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([600, 800]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    page.drawText("TAX INVOICE\nInvoice Number: INV-2026-001\nTotal Amount Due: $1,450.00\nPayment Terms: Net 30 Days", {
+      x: 50,
+      y: 700,
+      size: 14,
+      font,
+    });
+    const bytes = await doc.save();
+    const file = new File([bytes], "invoice.pdf", { type: "application/pdf" });
+
+    const classification = await ClientPdfEngine.classifyDocument(file);
+    expect(classification.labels.length).toBeGreaterThan(0);
+    expect(classification.primaryCategory.length).toBeGreaterThan(0);
+
+    const reloaded = await PDFDocument.load(classification.data);
+    expect(reloaded.getSubject()).toContain("Classified:");
+
+    // Test route
+    const formData = new FormData();
+    formData.append("fileInput", file);
+    const config: InternalAxiosRequestConfig = {
+      url: "/api/v1/ai/tools/classify-and-label",
+      method: "post",
+      data: formData,
+      headers: {} as any,
+    };
+    const res = await handleClientApiRequest(config);
+    expect(res?.status).toBe(200);
+    expect(res?.headers["x-stirling-classification-labels"]).toBeDefined();
+  });
+
+  test("ocrPdf generates sidecar text or searchable PDF", async () => {
+    const file = await createMultiPageTextPdf();
+    const sidecar = await ClientPdfEngine.ocrPdf(file, { sidecar: true });
+    expect(sidecar.isSidecar).toBe(true);
+    expect(typeof sidecar.data).toBe("string");
+    expect(sidecar.data.length).toBeGreaterThan(0);
+
+    const pdfOut = await ClientPdfEngine.ocrPdf(file, { sidecar: false });
+    expect(pdfOut.isSidecar).toBe(false);
+    expect(pdfOut.data instanceof Uint8Array).toBe(true);
+  });
 });

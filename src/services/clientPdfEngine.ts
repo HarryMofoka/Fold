@@ -15,6 +15,7 @@ import JSZip from "jszip";
 import { pdfWorkerManager } from "@app/services/pdfWorkerManager";
 import { BookmarkPayload } from "@app/utils/editTableOfContents";
 import type { SignatureValidationBackendResult } from "@app/types/validateSignature";
+import { classifyFileHeuristically } from "@app/services/heuristic/heuristicClassification";
 
 /**
  * Parses user-provided page specifications into 0-indexed page indices.
@@ -543,26 +544,115 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Inspects a PDF document for embedded JavaScript code.
+   * Inspects a PDF document and extracts embedded JavaScript code.
    */
   static async showJavascript(
     file: File,
-  ): Promise<{ hasJs: boolean; scripts: string[] }> {
+  ): Promise<{ hasJs: boolean; scripts: string[]; scriptText: string }> {
     const bytes = await file.arrayBuffer();
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
     const scripts: string[] = [];
 
-    const catalog = doc.catalog;
-    if (
-      catalog.has(PDFName.of("JavaScript")) ||
-      catalog.has(PDFName.of("OpenAction"))
-    ) {
-      scripts.push("[Embedded Document Action / Script detected in catalog]");
-    }
+    const extractScriptFromObj = (raw: any): string => {
+      if (!raw) return "";
+      const resolved = doc.context.lookup(raw);
+      if (!resolved) return "";
+
+      if (resolved instanceof PDFString || resolved instanceof PDFHexString) {
+        return resolved.decodeText();
+      }
+      if (resolved instanceof PDFName) {
+        return typeof resolved.decodeText === "function"
+          ? resolved.decodeText()
+          : resolved.asString();
+      }
+      if (resolved instanceof PDFRawStream) {
+        try {
+          return new TextDecoder().decode(resolved.getContents());
+        } catch {
+          return "";
+        }
+      }
+      if (resolved instanceof PDFDict) {
+        const js = resolved.get(PDFName.of("JS"));
+        if (js) {
+          return extractScriptFromObj(js);
+        }
+      }
+      const anyRes = resolved as any;
+      if (typeof anyRes.decodeText === "function") {
+        return anyRes.decodeText();
+      }
+      if (typeof anyRes.asString === "function") {
+        return anyRes.asString();
+      }
+      return "";
+    };
+
+    doc.context.enumerateIndirectObjects().forEach(([, obj]) => {
+      const dict = obj instanceof PDFDict ? obj : (obj as any)?.dict;
+      if (dict instanceof PDFDict) {
+        const s = dict.get(PDFName.of("S"));
+        const js = dict.get(PDFName.of("JS"));
+        if (
+          (s && s.toString() === "/JavaScript") ||
+          js !== undefined
+        ) {
+          const script = extractScriptFromObj(js || dict);
+          if (script && !scripts.includes(script)) {
+            scripts.push(script);
+          }
+        }
+      }
+    });
+
+    try {
+      const namesRef = doc.catalog.get(PDFName.of("Names"));
+      const namesDict = namesRef
+        ? doc.context.lookup(namesRef, PDFDict)
+        : null;
+      if (namesDict) {
+        const jsNameTreeRef = namesDict.get(PDFName.of("JavaScript"));
+        const jsNameTree = jsNameTreeRef
+          ? doc.context.lookup(jsNameTreeRef, PDFDict)
+          : null;
+        if (jsNameTree) {
+          const namesArrayRef = jsNameTree.get(PDFName.of("Names"));
+          const namesArray = namesArrayRef
+            ? doc.context.lookup(namesArrayRef, PDFArray)
+            : null;
+          if (namesArray) {
+            for (let i = 1; i < namesArray.size(); i += 2) {
+              const actionRef = namesArray.get(i);
+              const script = extractScriptFromObj(actionRef);
+              if (script && !scripts.includes(script)) {
+                scripts.push(script);
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+
+    try {
+      const openAction = doc.catalog.get(PDFName.of("OpenAction"));
+      if (openAction) {
+        const script = extractScriptFromObj(openAction);
+        if (script && !scripts.includes(script)) {
+          scripts.push(script);
+        }
+      }
+    } catch {}
+
+    const scriptText =
+      scripts.length > 0
+        ? scripts.join("\n\n// ----------------------------------------\n\n")
+        : "// No embedded JavaScript found in document.\n";
 
     return {
       hasJs: scripts.length > 0,
       scripts,
+      scriptText,
     };
   }
 
@@ -2180,25 +2270,172 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Client-side OCR text indexing and searchable PDF generator.
+   * Client-side OCR text indexing and searchable PDF generator via Tesseract.js.
    */
   static async ocrPdf(
     file: File,
     options?: { languages?: string[]; sidecar?: boolean },
   ): Promise<{ data: Uint8Array | string; isSidecar: boolean }> {
-    const textPages = await ClientPdfEngine.extractAllPageText(file);
+    let textPages: string[] = [];
+    try {
+      textPages = await ClientPdfEngine.extractAllPageText(file);
+    } catch {
+      textPages = [];
+    }
+
+    const rawBytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(rawBytes, { ignoreEncryption: true });
+    const pageCount = doc.getPageCount();
+
+    const needsOcr =
+      textPages.length < pageCount ||
+      textPages.some((p) => !p || p.trim().length === 0);
+
+    if (
+      needsOcr &&
+      typeof document !== "undefined" &&
+      typeof document.createElement === "function"
+    ) {
+      let workerDoc: any = null;
+      let tesseractWorker: any = null;
+
+      try {
+        const { createWorker } = await import("tesseract.js");
+        const lang = options?.languages?.[0] || "eng";
+        tesseractWorker = await createWorker(lang);
+
+        workerDoc = await pdfWorkerManager.createDocument(rawBytes.slice(0));
+        const font = await doc.embedFont(StandardFonts.Helvetica);
+
+        for (let i = 0; i < pageCount; i++) {
+          const existingText = (textPages[i] || "").trim();
+          if (existingText.length > 5) {
+            continue;
+          }
+
+          const pdfPage = await workerDoc.getPage(i + 1);
+          const viewport = pdfPage.getViewport({ scale: 1.5 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.floor(viewport.width));
+          canvas.height = Math.max(1, Math.floor(viewport.height));
+          const ctx = canvas.getContext("2d");
+
+          if (ctx) {
+            await pdfPage.render({ canvasContext: ctx, canvas, viewport })
+              .promise;
+            const ret = await tesseractWorker.recognize(canvas);
+            const recognizedText = ret?.data?.text || "";
+
+            textPages[i] = recognizedText;
+
+            if (!options?.sidecar && ret?.data?.words) {
+              const targetPage = doc.getPage(i);
+              const targetSize = targetPage.getSize();
+              const scaleX = targetSize.width / canvas.width;
+              const scaleY = targetSize.height / canvas.height;
+
+              for (const word of ret.data.words) {
+                if (!word.text || !word.bbox) continue;
+                const pdfX = word.bbox.x0 * scaleX;
+                const pdfY = targetSize.height - word.bbox.y1 * scaleY;
+                const fontSize = Math.max(
+                  6,
+                  Math.min(36, (word.bbox.y1 - word.bbox.y0) * scaleY),
+                );
+
+                try {
+                  const safeWord = word.text.replace(
+                    /[^\x20-\x7E\xA0-\xFF]/g,
+                    " ",
+                  );
+                  targetPage.drawText(safeWord, {
+                    x: Math.max(0, pdfX),
+                    y: Math.max(0, pdfY),
+                    size: fontSize,
+                    font,
+                    opacity: 0,
+                  });
+                } catch {
+                  // Skip characters outside font encoding
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[ClientPdfEngine.ocrPdf] Tesseract OCR fallback:", err);
+      } finally {
+        if (tesseractWorker) {
+          try {
+            await tesseractWorker.terminate();
+          } catch {}
+        }
+        if (workerDoc) {
+          await pdfWorkerManager.destroyDocument(workerDoc);
+        }
+      }
+    }
+
     if (options?.sidecar) {
       return {
         data: textPages.join("\n\n--- Page Break ---\n\n"),
         isSidecar: true,
       };
     }
-    const bytes = await file.arrayBuffer();
-    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
     doc.setProducer("Fold OCR Engine (Client-Side)");
     doc.setModificationDate(new Date());
     const outBytes = await doc.save({ useObjectStreams: true });
     return { data: outBytes, isSidecar: false };
+  }
+
+  /**
+   * Intelligently classifies document content using heuristic rule analysis and stamps metadata.
+   */
+  static async classifyDocument(file: File): Promise<{
+    data: Uint8Array;
+    labels: string[];
+    confidence: string;
+    primaryCategory: string;
+  }> {
+    let labels: string[] = [];
+    let confidence = "low";
+
+    try {
+      const result = await classifyFileHeuristically(file);
+      if (result && result.labels && result.labels.length > 0) {
+        labels = result.labels;
+        confidence = result.confidence;
+      }
+    } catch {
+      // Fallback if file has unreadable text
+    }
+
+    if (labels.length === 0) {
+      labels = ["document"];
+    }
+
+    const primaryCategory = labels[0]
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+    const formattedSubject = `Classified: ${primaryCategory} (${confidence} confidence)`;
+
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    doc.setSubject(formattedSubject);
+    doc.setKeywords(labels);
+    doc.setModificationDate(new Date());
+    doc.setProducer(`Fold Classification Engine - ${primaryCategory}`);
+
+    const updatedBytes = await doc.save({ useObjectStreams: true });
+    return {
+      data: updatedBytes,
+      labels,
+      confidence,
+      primaryCategory,
+    };
   }
 
   /**

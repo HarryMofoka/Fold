@@ -82,6 +82,7 @@
     "signature_pad": "^5.0.4",
     "smol-toml": "^1.7.1",
     "tailwindcss": "^4.1.13",
+    "tesseract.js": "^7.0.0",
     "use-sync-external-store": "^1.6.0",
     "web-vitals": "^5.1.0"
   },
