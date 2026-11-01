@@ -790,13 +790,22 @@ export default function HomePage() {
                 <button
                   type="button"
                   className="mobile-hamburger-button"
-                  aria-label={t("home.mobile.toggleMenu", "Toggle navigation menu")}
+                  aria-label={t(
+                    "home.mobile.toggleMenu",
+                    "Toggle navigation menu",
+                  )}
                   aria-expanded={mobileMenuOpen}
                   onClick={() => setMobileMenuOpen((open) => !open)}
                 >
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`} />
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`} />
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`} />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`}
+                  />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`}
+                  />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`}
+                  />
                 </button>
               </div>
             ) : (
@@ -819,13 +828,22 @@ export default function HomePage() {
                 <button
                   type="button"
                   className="mobile-hamburger-button"
-                  aria-label={t("home.mobile.toggleMenu", "Toggle navigation menu")}
+                  aria-label={t(
+                    "home.mobile.toggleMenu",
+                    "Toggle navigation menu",
+                  )}
                   aria-expanded={mobileMenuOpen}
                   onClick={() => setMobileMenuOpen((open) => !open)}
                 >
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`} />
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`} />
-                  <span className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`} />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-1-open" : ""}`}
+                  />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-2-open" : ""}`}
+                  />
+                  <span
+                    className={`mobile-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`}
+                  />
                 </button>
               </div>
             )}
@@ -893,7 +911,9 @@ export default function HomePage() {
                     <div className="mobile-drawer-brand">
                       <LogoIcon className="mobile-brand-icon" />
                       <span className="mobile-drawer-title">Fold</span>
-                      <span className="mobile-drawer-badge">Local &amp; Private</span>
+                      <span className="mobile-drawer-badge">
+                        Local &amp; Private
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -973,7 +993,9 @@ export default function HomePage() {
                       }}
                     >
                       <Icon name="book-open" size="1.125rem" />
-                      <span>{t("home.mobile.documentation", "Documentation")}</span>
+                      <span>
+                        {t("home.mobile.documentation", "Documentation")}
+                      </span>
                     </button>
                     <button
                       type="button"

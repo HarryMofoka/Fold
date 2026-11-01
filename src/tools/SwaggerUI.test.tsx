@@ -21,7 +21,9 @@ const render = (ui: React.ReactNode) =>
 describe("SwaggerUI", () => {
   it("renders Client API & Tools Reference interface without throwing", () => {
     render(<SwaggerUI />);
-    expect(screen.getByText("Client API & Tools Reference")).toBeInTheDocument();
+    expect(
+      screen.getByText("Client API & Tools Reference"),
+    ).toBeInTheDocument();
     expect(screen.getByText("100% Client-Side Engine")).toBeInTheDocument();
     expect(
       screen.getByText(/Fold processes all documents/i),

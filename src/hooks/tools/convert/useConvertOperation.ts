@@ -332,7 +332,10 @@ export const convertProcessor = async (
 
       processedFiles.push(...converted);
     } catch (error) {
-      console.warn(`ClientPdfEngine conversion failed for ${file.name}, trying network fallback:`, error);
+      console.warn(
+        `ClientPdfEngine conversion failed for ${file.name}, trying network fallback:`,
+        error,
+      );
       const endpoint = getEndpointUrl(
         parameters.fromExtension,
         actualToExtension,
@@ -353,7 +356,10 @@ export const convertProcessor = async (
 
           processedFiles.push(convertedFile);
         } catch (apiError) {
-          console.error(`Network conversion fallback also failed for ${file.name}:`, apiError);
+          console.error(
+            `Network conversion fallback also failed for ${file.name}:`,
+            apiError,
+          );
         }
       }
     }

@@ -186,4 +186,3 @@ tasks:
     cmds:
       - task: stubbed
       - task: live
-

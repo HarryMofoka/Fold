@@ -235,8 +235,7 @@ export async function handleClientApiRequest(
 
   // Mobile Scanner session endpoints
   if (url.includes("/api/v1/mobile-scanner/create-session/")) {
-    const sessId =
-      url.split("/create-session/")[1]?.split("?")[0] || "session";
+    const sessId = url.split("/create-session/")[1]?.split("?")[0] || "session";
     mobileSessions.set(sessId, {
       createdAt: Date.now(),
       expiresAt: Date.now() + 600000,
@@ -256,16 +255,10 @@ export async function handleClientApiRequest(
   }
 
   if (url.includes("/api/v1/mobile-scanner/validate-session/")) {
-    const sessId =
-      url.split("/validate-session/")[1]?.split("?")[0] || "";
+    const sessId = url.split("/validate-session/")[1]?.split("?")[0] || "";
     const valid =
       mobileSessions.has(sessId) || Boolean(sessId && sessId.length > 5);
-    return makeResponse(
-      config,
-      { valid },
-      "validate.json",
-      "application/json",
-    );
+    return makeResponse(config, { valid }, "validate.json", "application/json");
   }
 
   if (url.includes("/api/v1/mobile-scanner/files/")) {
@@ -660,10 +653,7 @@ export async function handleClientApiRequest(
     // Scale Pages
     if (url.includes("/general/scale-pages")) {
       if (!primaryFile) throw new Error("No file provided for page scaling.");
-      const scaledBytes = await ClientPdfEngine.scalePages(
-        primaryFile,
-        params,
-      );
+      const scaledBytes = await ClientPdfEngine.scalePages(primaryFile, params);
       return makeResponse(config, scaledBytes, `scaled_${primaryFile.name}`);
     }
 
@@ -672,11 +662,7 @@ export async function handleClientApiRequest(
       if (!primaryFile)
         throw new Error("No file provided to remove annotations.");
       const cleanBytes = await ClientPdfEngine.removeAnnotations(primaryFile);
-      return makeResponse(
-        config,
-        cleanBytes,
-        `no_annots_${primaryFile.name}`,
-      );
+      return makeResponse(config, cleanBytes, `no_annots_${primaryFile.name}`);
     }
 
     // Remove Certificate Signature
@@ -1008,11 +994,7 @@ export async function handleClientApiRequest(
         primaryFile,
         params,
       );
-      return makeResponse(
-        config,
-        updatedBytes,
-        `toc_${primaryFile.name}`,
-      );
+      return makeResponse(config, updatedBytes, `toc_${primaryFile.name}`);
     }
 
     // Add Image / Add Stamp
@@ -1113,8 +1095,7 @@ export async function handleClientApiRequest(
 
     // Classify & Label
     if (url.includes("/ai/tools/classify-and-label")) {
-      if (!primaryFile)
-        throw new Error("No file provided for classification.");
+      if (!primaryFile) throw new Error("No file provided for classification.");
       const classification =
         await ClientPdfEngine.classifyDocument(primaryFile);
       return makeResponse(

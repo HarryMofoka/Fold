@@ -32,7 +32,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Auto Redact",
     endpoint: "/api/v1/security/auto-redact",
     method: "POST",
-    description: "Detects sensitive terms, computes exact page bounding boxes, and draws visual redaction marks.",
+    description:
+      "Detects sensitive terms, computes exact page bounding boxes, and draws visual redaction marks.",
     engineMethod: "ClientPdfEngine.autoRedact",
     parameters: ["fileInput", "listOfText", "redactColor"],
   },
@@ -41,7 +42,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Remove Annotations",
     endpoint: "/api/v1/security/remove-annotations",
     method: "POST",
-    description: "Strips visual comments, markups, and highlights while preserving interactive AcroForm widgets.",
+    description:
+      "Strips visual comments, markups, and highlights while preserving interactive AcroForm widgets.",
     engineMethod: "ClientPdfEngine.removeAnnotations",
     parameters: ["fileInput", "removeWidgets?"],
   },
@@ -50,7 +52,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Sanitize PDF",
     endpoint: "/api/v1/security/sanitize-pdf",
     method: "POST",
-    description: "Removes metadata, JavaScript streams, attachments, and embedded tracking data.",
+    description:
+      "Removes metadata, JavaScript streams, attachments, and embedded tracking data.",
     engineMethod: "ClientPdfEngine.sanitizePdf",
     parameters: ["fileInput"],
   },
@@ -59,7 +62,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Convert to PowerPoint (PPTX)",
     endpoint: "/api/v1/convert/pdf/presentation",
     method: "POST",
-    description: "Generates an ECMA-376 PowerPoint presentation package (.pptx) with slides containing extracted page text.",
+    description:
+      "Generates an ECMA-376 PowerPoint presentation package (.pptx) with slides containing extracted page text.",
     engineMethod: "ClientPdfEngine.pdfToPptx",
     parameters: ["fileInput"],
   },
@@ -68,7 +72,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Convert to Word (DOCX)",
     endpoint: "/api/v1/convert/pdf/word",
     method: "POST",
-    description: "Generates an ECMA-376 Word package (.docx) containing formatted document paragraphs.",
+    description:
+      "Generates an ECMA-376 Word package (.docx) containing formatted document paragraphs.",
     engineMethod: "ClientPdfEngine.pdfToDocx",
     parameters: ["fileInput"],
   },
@@ -77,7 +82,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Convert to Text / Markdown",
     endpoint: "/api/v1/convert/pdf/text",
     method: "POST",
-    description: "Extracts text content across pages into plain text or structured Markdown format.",
+    description:
+      "Extracts text content across pages into plain text or structured Markdown format.",
     engineMethod: "ClientPdfEngine.pdfToText",
     parameters: ["fileInput"],
   },
@@ -86,7 +92,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Auto Rotate",
     endpoint: "/api/v1/misc/auto-rotate-pdf",
     method: "POST",
-    description: "Analyzes text orientation matrices per page and corrects upside-down or sideways pages.",
+    description:
+      "Analyzes text orientation matrices per page and corrects upside-down or sideways pages.",
     engineMethod: "ClientPdfEngine.autoRotate",
     parameters: ["fileInput", "dryRun?"],
   },
@@ -95,7 +102,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Edit Table of Contents",
     endpoint: "/api/v1/general/edit-table-of-contents",
     method: "POST",
-    description: "Updates or builds hierarchical PDF outline bookmarks with target page destinations.",
+    description:
+      "Updates or builds hierarchical PDF outline bookmarks with target page destinations.",
     engineMethod: "ClientPdfEngine.updateTableOfContents",
     parameters: ["fileInput", "bookmarkData", "replaceExisting?"],
   },
@@ -104,7 +112,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Extract Bookmarks",
     endpoint: "/api/v1/general/extract-bookmarks",
     method: "POST",
-    description: "Extracts existing outline tree bookmarks and destinations as structured JSON.",
+    description:
+      "Extracts existing outline tree bookmarks and destinations as structured JSON.",
     engineMethod: "ClientPdfEngine.extractBookmarks",
     parameters: ["fileInput"],
   },
@@ -113,7 +122,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Remove Images",
     endpoint: "/api/v1/misc/remove-images",
     method: "POST",
-    description: "Neutralizes raster image streams into lightweight blank XObjects without corrupting content streams.",
+    description:
+      "Neutralizes raster image streams into lightweight blank XObjects without corrupting content streams.",
     engineMethod: "ClientPdfEngine.removeImages",
     parameters: ["fileInput"],
   },
@@ -122,7 +132,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Scanner Image Split",
     endpoint: "/api/v1/misc/extract-image-scans",
     method: "POST",
-    description: "Segments multiple items (photos, receipts, cards) from flatbed scanner pages into separate cropped images.",
+    description:
+      "Segments multiple items (photos, receipts, cards) from flatbed scanner pages into separate cropped images.",
     engineMethod: "ClientPdfEngine.extractImageScans",
     parameters: ["fileInput", "format?", "dpi?"],
   },
@@ -131,7 +142,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Detect Form Fields",
     endpoint: "/api/v1/form/form-detection/detect",
     method: "POST",
-    description: "Inspects AcroForm field counts and properties across text, check, and radio widgets.",
+    description:
+      "Inspects AcroForm field counts and properties across text, check, and radio widgets.",
     engineMethod: "ClientPdfEngine.getFormFields",
     parameters: ["fileInput"],
   },
@@ -140,7 +152,8 @@ const API_ENDPOINTS: ApiEndpointInfo[] = [
     name: "Fill Form Fields",
     endpoint: "/api/v1/form/fill",
     method: "POST",
-    description: "Populates AcroForm inputs with structured key-value data, with optional visual flattening.",
+    description:
+      "Populates AcroForm inputs with structured key-value data, with optional visual flattening.",
     engineMethod: "ClientPdfEngine.fillForm",
     parameters: ["fileInput", "data", "flatten?"],
   },
@@ -189,7 +202,10 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
 
         <Paper withBorder p="md" radius="md">
           <TextInput
-            placeholder={t("swagger.search", "Search endpoints, tools, or operations...")}
+            placeholder={t(
+              "swagger.search",
+              "Search endpoints, tools, or operations...",
+            )}
             value={filter}
             onChange={(e) => setFilter(e.currentTarget.value)}
             leftSection={<Icon name="search" size={16} />}
@@ -203,7 +219,10 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
                 <Group justify="space-between" pr="md">
                   <Text fw={600}>{cat}</Text>
                   <Badge variant="subtle">
-                    {filteredEndpoints.filter((ep) => ep.category === cat).length}{" "}
+                    {
+                      filteredEndpoints.filter((ep) => ep.category === cat)
+                        .length
+                    }{" "}
                     endpoints
                   </Badge>
                 </Group>
@@ -213,8 +232,17 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
                   {filteredEndpoints
                     .filter((ep) => ep.category === cat)
                     .map((ep) => (
-                      <Card key={ep.endpoint} withBorder padding="sm" radius="sm">
-                        <Group justify="space-between" align="flex-start" mb="xs">
+                      <Card
+                        key={ep.endpoint}
+                        withBorder
+                        padding="sm"
+                        radius="sm"
+                      >
+                        <Group
+                          justify="space-between"
+                          align="flex-start"
+                          mb="xs"
+                        >
                           <div>
                             <Group gap="xs" mb={4}>
                               <Badge
@@ -242,7 +270,12 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
                               Parameters:
                             </Text>
                             {ep.parameters.map((param) => (
-                              <Badge key={param} size="xs" variant="light" color="gray">
+                              <Badge
+                                key={param}
+                                size="xs"
+                                variant="light"
+                                color="gray"
+                              >
                                 {param}
                               </Badge>
                             ))}

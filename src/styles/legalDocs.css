@@ -166,7 +166,9 @@
   height: 1.5px;
   background-color: #171717;
   border-radius: 2px;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .legal-docs-hamburger-bar.bar-1-open {
@@ -180,7 +182,6 @@
 .legal-docs-hamburger-bar.bar-3-open {
   transform: translateY(-5px) rotate(-45deg);
 }
-
 
 @media (max-width: 48rem) {
   .legal-docs-header__nav {
@@ -208,7 +209,8 @@
   );
   backdrop-filter: blur(40px) saturate(190%) contrast(105%);
   -webkit-backdrop-filter: blur(40px) saturate(190%) contrast(105%);
-  padding: calc(env(safe-area-inset-top, 0px) + 4.5rem) 1.5rem calc(env(safe-area-inset-bottom, 0px) + 1.75rem);
+  padding: calc(env(safe-area-inset-top, 0px) + 4.5rem) 1.5rem
+    calc(env(safe-area-inset-bottom, 0px) + 1.75rem);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -247,7 +249,9 @@
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 4px 16px -2px rgba(0, 0, 0, 0.04),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
   color: #1a1a1a;
   text-decoration: none;
   cursor: pointer;
@@ -265,7 +269,6 @@
   color: #000000;
   font-weight: 600;
 }
-
 
 /* ── Main Documentation Shell Layout ─────────────────────────────────────── */
 .legal-docs-layout {

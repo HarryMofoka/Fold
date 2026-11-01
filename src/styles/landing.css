@@ -133,7 +133,8 @@
   justify-content: space-between;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: calc(env(safe-area-inset-top, 0px) + 1.25rem) 1.5rem calc(env(safe-area-inset-bottom, 0px) + 1.75rem);
+  padding: calc(env(safe-area-inset-top, 0px) + 1.25rem) 1.5rem
+    calc(env(safe-area-inset-bottom, 0px) + 1.75rem);
   background: radial-gradient(
     135% 100% at 50% 0%,
     rgba(255, 255, 255, 0.78) 0%,
@@ -190,4 +191,3 @@
   background: rgba(255, 255, 255, 0.85);
   transform: scale(0.98);
 }
-

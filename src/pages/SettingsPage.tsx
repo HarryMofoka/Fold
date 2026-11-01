@@ -374,7 +374,9 @@ const SettingsPageInner: React.FC = () => {
               <div className="settings-page__mobile-bar-spacer" />
               <ActionIcon
                 variant="tertiary"
-                onClick={() => void confirmIfDirty().then((ok) => ok && leave())}
+                onClick={() =>
+                  void confirmIfDirty().then((ok) => ok && leave())
+                }
                 aria-label={t("common.close", "Close")}
                 className="settings-page__mobile-close-btn"
               >

@@ -517,7 +517,9 @@ export class MobileTransferClient {
     return this.status;
   }
 
-  public onStatusChange(callback: (status: TransferStatus) => void): () => void {
+  public onStatusChange(
+    callback: (status: TransferStatus) => void,
+  ): () => void {
     this.statusListeners.add(callback);
     callback(this.status);
     return () => {
@@ -526,9 +528,7 @@ export class MobileTransferClient {
   }
 
   public isConnected(): boolean {
-    return (
-      this.status === "connected" || Boolean(this.conn && this.conn.open)
-    );
+    return this.status === "connected" || Boolean(this.conn && this.conn.open);
   }
 
   public async waitForConnection(timeoutMs = 15000): Promise<boolean> {

@@ -148,8 +148,18 @@ export default function PrivacyPage() {
             }}
             className="legal-docs-header__back-btn"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.2"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
           <a
@@ -249,7 +259,6 @@ export default function PrivacyPage() {
               className={`legal-docs-hamburger-bar ${mobileMenuOpen ? "bar-3-open" : ""}`}
             />
           </button>
-
         </div>
       </header>
 

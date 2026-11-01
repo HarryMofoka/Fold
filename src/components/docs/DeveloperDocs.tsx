@@ -125,7 +125,6 @@ export function DeveloperDocs() {
         </Button>
       </div>
 
-
       {/* Layout column, not a landmark: the <nav> inside already carries its
           own named landmark, and an unlabelled complementary region would be
           indistinguishable to assistive tech. */}

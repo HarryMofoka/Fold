@@ -36,4 +36,3 @@ export function SidebarHeader({ className, onExit }: SidebarHeaderProps) {
     </div>
   );
 }
-

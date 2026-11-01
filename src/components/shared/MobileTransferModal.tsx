@@ -154,7 +154,10 @@ export default function MobileTransferModal({
               size="sm"
               leftSection={<Icon name="scan" size="0.85rem" />}
             >
-              {t("mobileTransfer.waitingForScan", "Scan code with phone camera")}
+              {t(
+                "mobileTransfer.waitingForScan",
+                "Scan code with phone camera",
+              )}
             </Badge>
           )}
 

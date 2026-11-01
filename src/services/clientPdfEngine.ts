@@ -12,6 +12,7 @@ import {
   PDFRawStream,
 } from "@cantoo/pdf-lib";
 import JSZip from "jszip";
+import pako from "pako";
 import { pdfWorkerManager } from "@app/services/pdfWorkerManager";
 import { BookmarkPayload } from "@app/utils/editTableOfContents";
 import type { SignatureValidationBackendResult } from "@app/types/validateSignature";
@@ -594,10 +595,7 @@ export class ClientPdfEngine {
       if (dict instanceof PDFDict) {
         const s = dict.get(PDFName.of("S"));
         const js = dict.get(PDFName.of("JS"));
-        if (
-          (s && s.toString() === "/JavaScript") ||
-          js !== undefined
-        ) {
+        if ((s && s.toString() === "/JavaScript") || js !== undefined) {
           const script = extractScriptFromObj(js || dict);
           if (script && !scripts.includes(script)) {
             scripts.push(script);
@@ -608,9 +606,7 @@ export class ClientPdfEngine {
 
     try {
       const namesRef = doc.catalog.get(PDFName.of("Names"));
-      const namesDict = namesRef
-        ? doc.context.lookup(namesRef, PDFDict)
-        : null;
+      const namesDict = namesRef ? doc.context.lookup(namesRef, PDFDict) : null;
       if (namesDict) {
         const jsNameTreeRef = namesDict.get(PDFName.of("JavaScript"));
         const jsNameTree = jsNameTreeRef
@@ -767,18 +763,25 @@ export class ClientPdfEngine {
     );
     const maxDim = Math.max(600, Math.min(2400, 2400 - optimizeLevel * 180));
 
-    if (
-      typeof document !== "undefined" &&
-      typeof document.createElement === "function" &&
-      typeof Image !== "undefined"
-    ) {
-      const indirectObjects = doc.context.enumerateIndirectObjects();
-      for (const [, obj] of indirectObjects) {
-        if (obj instanceof PDFRawStream) {
-          const dict = obj.dict;
+    doc.catalog.delete(PDFName.of("PieceInfo"));
+    doc.catalog.delete(PDFName.of("SpiderInfo"));
+
+    for (const page of doc.getPages()) {
+      page.node.delete(PDFName.of("Thumb"));
+      page.node.delete(PDFName.of("PieceInfo"));
+    }
+
+    const indirectObjects = doc.context.enumerateIndirectObjects();
+    for (const [, obj] of indirectObjects) {
+      if (obj instanceof PDFRawStream) {
+        const dict = obj.dict;
+        if (!dict) continue;
+
+        if (dict.get(PDFName.of("Subtype")) === PDFName.of("Image")) {
           if (
-            dict &&
-            dict.get(PDFName.of("Subtype")) === PDFName.of("Image")
+            typeof document !== "undefined" &&
+            typeof document.createElement === "function" &&
+            typeof Image !== "undefined"
           ) {
             try {
               const streamBytes = obj.getContents();
@@ -803,7 +806,10 @@ export class ClientPdfEngine {
 
                     const origW = img.naturalWidth || img.width;
                     const origH = img.naturalHeight || img.height;
-                    const scale = Math.min(1.0, maxDim / Math.max(origW, origH));
+                    const scale = Math.min(
+                      1.0,
+                      maxDim / Math.max(origW, origH),
+                    );
                     const newW = Math.max(1, Math.round(origW * scale));
                     const newH = Math.max(1, Math.round(origH * scale));
 
@@ -846,6 +852,20 @@ export class ClientPdfEngine {
               // Ignore corrupted image stream
             }
           }
+        } else if (!dict.has(PDFName.of("Filter"))) {
+          try {
+            const raw = obj.getContents();
+            if (raw && raw.length > 64) {
+              const deflated = pako.deflate(raw);
+              if (deflated.length < raw.length) {
+                obj.updateContents(deflated);
+                dict.set(PDFName.of("Filter"), PDFName.of("FlateDecode"));
+                dict.set(PDFName.of("Length"), PDFNumber.of(deflated.length));
+              }
+            }
+          } catch {
+            // Ignore uncompressable stream
+          }
         }
       }
     }
@@ -854,15 +874,101 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Repairs damaged or malformed PDF syntax by round-tripping through pdf-lib parser.
+   * Repairs damaged or malformed PDF syntax by reconstructing missing xref tables and markers.
    */
   static async repairPdf(file: File): Promise<Uint8Array> {
-    const bytes = await file.arrayBuffer();
-    const doc = await PDFDocument.load(bytes, {
-      ignoreEncryption: true,
-      parseSpeed: 0,
-    });
-    return await doc.save({ useObjectStreams: true });
+    const rawBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(rawBuffer);
+
+    let startIndex = 0;
+    const maxSearch = Math.min(bytes.length - 4, 65536);
+    for (let i = 0; i < maxSearch; i++) {
+      if (
+        bytes[i] === 0x25 &&
+        bytes[i + 1] === 0x50 &&
+        bytes[i + 2] === 0x44 &&
+        bytes[i + 3] === 0x46 &&
+        bytes[i + 4] === 0x2d
+      ) {
+        startIndex = i;
+        break;
+      }
+    }
+
+    let workingBytes = startIndex > 0 ? bytes.subarray(startIndex) : bytes;
+
+    const tailLength = Math.min(workingBytes.length, 1024);
+    const tailBytes = workingBytes.subarray(workingBytes.length - tailLength);
+    const tailStr = new TextDecoder("latin1").decode(tailBytes);
+    if (!tailStr.includes("%%EOF")) {
+      const appended = new Uint8Array(workingBytes.length + 8);
+      appended.set(workingBytes, 0);
+      const eofBytes = new TextEncoder().encode("\n%%EOF\n");
+      appended.set(eofBytes, workingBytes.length);
+      workingBytes = appended;
+    }
+
+    try {
+      const doc = await PDFDocument.load(workingBytes, {
+        ignoreEncryption: true,
+        parseSpeed: 0,
+      });
+      return await doc.save({ useObjectStreams: true });
+    } catch (_loadErr) {
+      try {
+        const fullText = new TextDecoder("latin1").decode(workingBytes);
+        const lastEndObj = fullText.lastIndexOf("endobj");
+        if (lastEndObj !== -1) {
+          const bodyText = fullText.substring(0, lastEndObj + 6) + "\n";
+          const objRegex = /(\d+)\s+(\d+)\s+obj/g;
+          const objects = new Map<number, { offset: number; gen: number }>();
+          let match: RegExpExecArray | null;
+
+          while ((match = objRegex.exec(bodyText)) !== null) {
+            const num = parseInt(match[1], 10);
+            const gen = parseInt(match[2], 10);
+            objects.set(num, { offset: match.index, gen });
+          }
+
+          if (objects.size > 0) {
+            const maxNum = Math.max(...Array.from(objects.keys()));
+            const catalogMatch =
+              bodyText.match(/\/Root\s+(\d+)\s+(\d+)\s+R/) ||
+              bodyText.match(/(\d+)\s+(\d+)\s+obj[\s\S]*?\/Type\s*\/Catalog/);
+            const rootNum = catalogMatch ? catalogMatch[1] : "1";
+            const rootGen = catalogMatch ? catalogMatch[2] : "0";
+
+            let xrefStr = `xref\n0 ${maxNum + 1}\n0000000000 65535 f \r\n`;
+            for (let i = 1; i <= maxNum; i++) {
+              if (objects.has(i)) {
+                const item = objects.get(i)!;
+                xrefStr += `${item.offset.toString().padStart(10, "0")} ${item.gen.toString().padStart(5, "0")} n \r\n`;
+              } else {
+                xrefStr += `0000000000 00000 f \r\n`;
+              }
+            }
+
+            const xrefOffset = bodyText.length;
+            const trailer = `trailer\n<< /Size ${maxNum + 1} /Root ${rootNum} ${rootGen} R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+            const reconstructed = bodyText + xrefStr + trailer;
+            const reconBytes = new Uint8Array(reconstructed.length);
+            for (let i = 0; i < reconstructed.length; i++) {
+              reconBytes[i] = reconstructed.charCodeAt(i) & 0xff;
+            }
+
+            const recoveredDoc = await PDFDocument.load(reconBytes, {
+              ignoreEncryption: true,
+              parseSpeed: 0,
+            });
+            return await recoveredDoc.save({ useObjectStreams: true });
+          }
+        }
+      } catch (_reconErr) {
+        // Fall back to workingBytes
+      }
+    }
+
+    return workingBytes;
   }
 
   /**
@@ -1156,7 +1262,9 @@ export class ClientPdfEngine {
 
     await pdfWorkerManager.destroyDocument(doc);
     html += `</body>\n</html>`;
-    return new File([html], `${base}.html`, { type: "text/html;charset=utf-8" });
+    return new File([html], `${base}.html`, {
+      type: "text/html;charset=utf-8",
+    });
   }
 
   /**
@@ -1288,7 +1396,10 @@ export class ClientPdfEngine {
    * Generates a PDF from plain text or Markdown with proper pagination and typography.
    */
   static async textToPdf(file: File): Promise<Uint8Array> {
-    const rawText = await file.text();
+    const rawText =
+      typeof file.text === "function"
+        ? await file.text()
+        : new TextDecoder().decode(await file.arrayBuffer());
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontSize = 10;
@@ -1409,16 +1520,251 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Normalizes PDF and sets standard PDF/A archiving metadata.
+   * Converts an Excel spreadsheet (.xlsx/.xls) into a PDF document client-side.
+   */
+  static async xlsxToPdf(file: File): Promise<Uint8Array> {
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const sharedStrings: string[] = [];
+      const sstXml = await zip.file("xl/sharedStrings.xml")?.async("string");
+      if (sstXml) {
+        const siMatches = sstXml.match(/<si[\s>][\s\S]*?<\/si>/g) || [];
+        for (const si of siMatches) {
+          const tMatches = si.match(/<t[^>]*>([^<]*)<\/t>/g) || [];
+          const text = tMatches.map((t) => t.replace(/<[^>]+>/g, "")).join("");
+          sharedStrings.push(
+            text
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&apos;/g, "'"),
+          );
+        }
+      }
+
+      const rowsText: string[] = [];
+      const sheetFiles = Object.keys(zip.files)
+        .filter(
+          (k) => k.startsWith("xl/worksheets/sheet") && k.endsWith(".xml"),
+        )
+        .sort();
+
+      for (const sheetPath of sheetFiles) {
+        const sheetXml = await zip.file(sheetPath)?.async("string");
+        if (!sheetXml) continue;
+
+        const rowMatches = sheetXml.match(/<row[\s>][\s\S]*?<\/row>/g) || [];
+        for (const rowXml of rowMatches) {
+          const cellMatches = rowXml.match(/<c[\s>][\s\S]*?<\/c>/g) || [];
+          const cellValues: string[] = [];
+          for (const cellXml of cellMatches) {
+            const isShared = cellXml.includes('t="s"');
+            const vMatch = cellXml.match(/<v>([^<]*)<\/v>/);
+            const isInline = cellXml.includes('t="inlineStr"');
+            if (isInline) {
+              const inlineMatch = cellXml.match(/<t[^>]*>([^<]*)<\/t>/);
+              cellValues.push(inlineMatch ? inlineMatch[1] : "");
+            } else if (vMatch) {
+              const rawVal = vMatch[1];
+              if (isShared) {
+                const sIdx = parseInt(rawVal, 10);
+                cellValues.push(sharedStrings[sIdx] ?? rawVal);
+              } else {
+                cellValues.push(rawVal);
+              }
+            }
+          }
+          if (cellValues.some((v) => v.trim().length > 0)) {
+            rowsText.push(cellValues.join("    |    "));
+          }
+        }
+      }
+
+      if (rowsText.length > 0) {
+        const textFile = new File(
+          [rowsText.join("\n")],
+          `${file.name.replace(/\.[^/.]+$/, "")}.txt`,
+          { type: "text/plain" },
+        );
+        return await ClientPdfEngine.textToPdf(textFile);
+      }
+    } catch (e) {
+      console.warn("xlsxToPdf failed, falling back to raw text:", e);
+    }
+    return await ClientPdfEngine.textToPdf(file);
+  }
+
+  /**
+   * Converts a PowerPoint presentation (.pptx) into a slide deck PDF.
+   */
+  static async pptxToPdf(file: File): Promise<Uint8Array> {
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const slidePaths = Object.keys(zip.files)
+        .filter((k) => k.startsWith("ppt/slides/slide") && k.endsWith(".xml"))
+        .sort((a, b) => {
+          const numA = parseInt(a.replace(/\D/g, ""), 10) || 0;
+          const numB = parseInt(b.replace(/\D/g, ""), 10) || 0;
+          return numA - numB;
+        });
+
+      if (slidePaths.length > 0) {
+        const doc = await PDFDocument.create();
+        const font = await doc.embedFont(StandardFonts.Helvetica);
+        const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+        const pageWidth = 841.89;
+        const pageHeight = 595.28;
+        const margin = 54;
+        const maxWidth = pageWidth - margin * 2;
+
+        for (let i = 0; i < slidePaths.length; i++) {
+          const slideXml = await zip.file(slidePaths[i])?.async("string");
+          if (!slideXml) continue;
+
+          const page = doc.addPage([pageWidth, pageHeight]);
+          page.drawRectangle({
+            x: margin,
+            y: pageHeight - margin - 2,
+            width: maxWidth,
+            height: 2,
+            color: rgb(0.2, 0.4, 0.7),
+          });
+
+          page.drawText(`Slide ${i + 1} of ${slidePaths.length}`, {
+            x: pageWidth - margin - 80,
+            y: margin / 2,
+            size: 9,
+            font,
+            color: rgb(0.5, 0.5, 0.5),
+          });
+
+          const pMatches = slideXml.match(/<a:p[\s>][\s\S]*?<\/a:p>/g) || [];
+          let currentY = pageHeight - margin - 32;
+
+          for (let pIdx = 0; pIdx < pMatches.length; pIdx++) {
+            const pXml = pMatches[pIdx];
+            const tMatches = pXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+            const text = tMatches
+              .map((t) => t.replace(/<[^>]+>/g, ""))
+              .join("")
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&apos;/g, "'")
+              .trim();
+
+            if (!text) continue;
+
+            const isTitle = pIdx === 0 && text.length < 80;
+            const fontSize = isTitle ? 18 : 12;
+            const currentFont = isTitle ? fontBold : font;
+            const lineHeight = fontSize * 1.4;
+
+            if (currentY - lineHeight < margin) break;
+
+            const safeText = text.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
+            page.drawText(safeText, {
+              x: margin + (isTitle ? 0 : 16),
+              y: currentY,
+              size: fontSize,
+              font: currentFont,
+              color: isTitle ? rgb(0.1, 0.1, 0.2) : rgb(0.2, 0.2, 0.2),
+            });
+
+            currentY -= lineHeight + (isTitle ? 12 : 6);
+          }
+        }
+
+        return await doc.save({ useObjectStreams: true });
+      }
+    } catch (e) {
+      console.warn("pptxToPdf failed, falling back to raw text:", e);
+    }
+    return await ClientPdfEngine.textToPdf(file);
+  }
+
+  /**
+   * Normalizes PDF and sets standard ISO PDF/A-1b archiving metadata and OutputIntents.
    */
   static async pdfToPdfA(file: File): Promise<Uint8Array> {
     const bytes = await file.arrayBuffer();
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    doc.setTitle(doc.getTitle() || file.name.replace(/\.pdf$/i, ""));
+    const title = doc.getTitle() || file.name.replace(/\.pdf$/i, "");
+    doc.setTitle(title);
     doc.setProducer("Fold (Client-Side Local Engine)");
     doc.setCreator("Fold");
-    doc.setModificationDate(new Date());
-    return await doc.save({ useObjectStreams: true });
+    const now = new Date();
+    doc.setModificationDate(now);
+
+    const isoDate = now.toISOString();
+    const safeTitle = title
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const xmpMetadata = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:part>1</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:title><rdf:Alt><rdf:li xml:lang="x-default">${safeTitle}</rdf:li></rdf:Alt></dc:title>
+      <dc:creator><rdf:Seq><rdf:li>Fold</rdf:li></rdf:Seq></dc:creator>
+    </rdf:Description>
+    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
+      <pdf:Producer>Fold (Client-Side Local Engine)</pdf:Producer>
+    </rdf:Description>
+    <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+      <xmp:CreatorTool>Fold</xmp:CreatorTool>
+      <xmp:CreateDate>${isoDate}</xmp:CreateDate>
+      <xmp:ModifyDate>${isoDate}</xmp:ModifyDate>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
+
+    const metaStream = doc.context.stream(xmpMetadata);
+    metaStream.dict.set(PDFName.of("Type"), PDFName.of("Metadata"));
+    metaStream.dict.set(PDFName.of("Subtype"), PDFName.of("XML"));
+    const metaRef = doc.context.register(metaStream);
+    doc.catalog.set(PDFName.of("Metadata"), metaRef);
+
+    const icc = new Uint8Array(132);
+    const view = new DataView(icc.buffer);
+    view.setUint32(0, 132);
+    icc.set([0x61, 0x70, 0x70, 0x6c], 4);
+    view.setUint32(8, 0x02100000);
+    icc.set([0x70, 0x72, 0x74, 0x72], 12);
+    icc.set([0x52, 0x47, 0x42, 0x20], 16);
+    icc.set([0x58, 0x59, 0x5a, 0x20], 20);
+    icc.set([0x61, 0x63, 0x73, 0x70], 36);
+    view.setUint32(68, 0);
+    view.setUint32(72, 0x0000f6d6);
+    view.setUint32(76, 0x00010000);
+    view.setUint32(80, 0x0000d32d);
+    view.setUint32(128, 0);
+
+    const iccStream = doc.context.flateStream(icc);
+    iccStream.dict.set(PDFName.of("N"), PDFNumber.of(3));
+    const iccRef = doc.context.register(iccStream);
+
+    const outputIntent = doc.context.obj({
+      Type: "OutputIntent",
+      S: "GTS_PDFA1",
+      OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+      RegistryName: PDFString.of("http://www.color.org"),
+      Info: PDFString.of("sRGB IEC61966-2.1"),
+      DestOutputProfile: iccRef,
+    });
+    doc.catalog.set(
+      PDFName.of("OutputIntents"),
+      doc.context.obj([outputIntent]),
+    );
+
+    return await doc.save({ useObjectStreams: false });
   }
 
   /**
@@ -1451,9 +1797,7 @@ export class ClientPdfEngine {
       "tiff",
       "svg",
     ].includes(from);
-    const isImageTo = ["png", "jpg", "jpeg", "webp", "gif", "bmp"].includes(
-      to,
-    );
+    const isImageTo = ["png", "jpg", "jpeg", "webp", "gif", "bmp"].includes(to);
 
     // 1. Target is PDF
     if (to === "pdf") {
@@ -1475,6 +1819,22 @@ export class ClientPdfEngine {
       }
       if (from === "docx" || from === "doc" || from === "odt") {
         const bytes = await ClientPdfEngine.docxToPdf(file);
+        return [
+          new File([bytes as unknown as BlobPart], `${base}.pdf`, {
+            type: "application/pdf",
+          }),
+        ];
+      }
+      if (from === "xlsx" || from === "xls" || from === "ods") {
+        const bytes = await ClientPdfEngine.xlsxToPdf(file);
+        return [
+          new File([bytes as unknown as BlobPart], `${base}.pdf`, {
+            type: "application/pdf",
+          }),
+        ];
+      }
+      if (from === "pptx" || from === "ppt" || from === "odp") {
+        const bytes = await ClientPdfEngine.pptxToPdf(file);
         return [
           new File([bytes as unknown as BlobPart], `${base}.pdf`, {
             type: "application/pdf",
@@ -1594,7 +1954,9 @@ export class ClientPdfEngine {
   ): Promise<Uint8Array> {
     const bytes = await file.arrayBuffer();
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    const userPassword = options.password ? String(options.password) : undefined;
+    const userPassword = options.password
+      ? String(options.password)
+      : undefined;
     const ownerPassword = options.ownerPassword
       ? String(options.ownerPassword)
       : userPassword;
@@ -1810,7 +2172,9 @@ export class ClientPdfEngine {
     options?: { overlayMode?: string; overlayPosition?: string },
   ): Promise<Uint8Array> {
     const mainBytes = await mainFile.arrayBuffer();
-    const mainDoc = await PDFDocument.load(mainBytes, { ignoreEncryption: true });
+    const mainDoc = await PDFDocument.load(mainBytes, {
+      ignoreEncryption: true,
+    });
 
     if (!overlayFiles || overlayFiles.length === 0) {
       return await mainDoc.save();
@@ -2104,7 +2468,12 @@ export class ClientPdfEngine {
         const textContent = await page.getTextContent();
         const currentRotation = page.rotate || 0;
 
-        const angleCounts: Record<number, number> = { 0: 0, 90: 0, 180: 0, 270: 0 };
+        const angleCounts: Record<number, number> = {
+          0: 0,
+          90: 0,
+          180: 0,
+          270: 0,
+        };
         let totalItems = 0;
 
         for (const item of textContent.items as any[]) {
@@ -2443,15 +2812,209 @@ export class ClientPdfEngine {
    */
   static async replaceColor(
     file: File,
-    _options?: {
+    options?: {
       replaceAndInvertOption?: string;
       highContrastColorCombination?: string;
+      textColor?: string;
+      backGroundColor?: string;
     },
   ): Promise<Uint8Array> {
+    const opt = options?.replaceAndInvertOption || "FULL_INVERSION";
+    const contrastCombo =
+      options?.highContrastColorCombination || "WHITE_TEXT_ON_BLACK";
+
+    let textRgb = [1, 1, 1];
+    let bgRgb = [0, 0, 0];
+
+    if (opt === "HIGH_CONTRAST_COLOR") {
+      switch (contrastCombo) {
+        case "YELLOW_TEXT_ON_BLACK":
+          textRgb = [1, 1, 0];
+          bgRgb = [0, 0, 0];
+          break;
+        case "GREEN_TEXT_ON_BLACK":
+          textRgb = [0, 1, 0];
+          bgRgb = [0, 0, 0];
+          break;
+        case "BLACK_TEXT_ON_WHITE":
+          textRgb = [0, 0, 0];
+          bgRgb = [1, 1, 1];
+          break;
+        case "WHITE_TEXT_ON_BLACK":
+        default:
+          textRgb = [1, 1, 1];
+          bgRgb = [0, 0, 0];
+          break;
+      }
+    } else if (opt === "CUSTOM_COLOR") {
+      const parseHex = (
+        hex: string | undefined,
+        defaultVal: number[],
+      ): number[] => {
+        if (!hex) return defaultVal;
+        const clean = hex.replace("#", "");
+        if (clean.length < 6) return defaultVal;
+        return [
+          parseInt(clean.slice(0, 2), 16) / 255,
+          parseInt(clean.slice(2, 4), 16) / 255,
+          parseInt(clean.slice(4, 6), 16) / 255,
+        ];
+      };
+      textRgb = parseHex(options?.textColor, [1, 1, 1]);
+      bgRgb = parseHex(options?.backGroundColor, [0, 0, 0]);
+    }
+
+    const rawBytes = await file.arrayBuffer();
+
+    try {
+      const doc = await PDFDocument.load(new Uint8Array(rawBytes.slice(0)), {
+        ignoreEncryption: true,
+      });
+      const pages = doc.getPages();
+      let hasVectorContent = false;
+
+      for (const page of pages) {
+        const { width, height } = page.getSize();
+        const contentsRef = page.node.Contents();
+        if (!contentsRef) continue;
+
+        const resolvedContents = doc.context.lookup(contentsRef);
+        const streamRefs: any[] = [];
+        if (resolvedContents instanceof PDFArray) {
+          for (let i = 0; i < resolvedContents.size(); i++) {
+            streamRefs.push(resolvedContents.get(i));
+          }
+        } else {
+          streamRefs.push(contentsRef);
+        }
+
+        const bgStreamText = `q\n${bgRgb[0].toFixed(3)} ${bgRgb[1].toFixed(3)} ${bgRgb[2].toFixed(3)} rg\n0 0 ${width.toFixed(2)} ${height.toFixed(2)} re\nf\nQ\n`;
+        const bgStream = doc.context.flateStream(bgStreamText);
+        const bgRef = doc.context.register(bgStream);
+
+        const newContentsArray = doc.context.obj([bgRef]);
+
+        for (const sRef of streamRefs) {
+          const streamObj = doc.context.lookup(sRef);
+          if (
+            !streamObj ||
+            typeof (streamObj as any).getContents !== "function"
+          ) {
+            newContentsArray.push(sRef);
+            continue;
+          }
+
+          const streamBytes = (streamObj as any).getContents();
+          if (!streamBytes || streamBytes.length === 0) {
+            newContentsArray.push(sRef);
+            continue;
+          }
+
+          let decompressed: Uint8Array;
+          let wasCompressed = false;
+          try {
+            decompressed = pako.inflate(streamBytes);
+            wasCompressed = true;
+          } catch {
+            decompressed = streamBytes;
+          }
+
+          let text = new TextDecoder("latin1").decode(decompressed);
+
+          if (/\b(Tj|TJ|rg|RG|re|m|l|c|v|y|f|F|s|S|B|BT)\b/.test(text)) {
+            hasVectorContent = true;
+
+            text = text.replace(
+              /\b(\d*\.?\d+)\s+(\d*\.?\d+)\s+(\d*\.?\d+)\s+(rg|RG)\b/g,
+              (_m, r, g, b, op) => {
+                if (opt === "FULL_INVERSION") {
+                  const invR = Math.max(
+                    0,
+                    Math.min(1, 1 - parseFloat(r)),
+                  ).toFixed(3);
+                  const invG = Math.max(
+                    0,
+                    Math.min(1, 1 - parseFloat(g)),
+                  ).toFixed(3);
+                  const invB = Math.max(
+                    0,
+                    Math.min(1, 1 - parseFloat(b)),
+                  ).toFixed(3);
+                  return `${invR} ${invG} ${invB} ${op}`;
+                }
+                return `${textRgb[0].toFixed(3)} ${textRgb[1].toFixed(3)} ${textRgb[2].toFixed(3)} ${op}`;
+              },
+            );
+
+            text = text.replace(/\b(\d*\.?\d+)\s+([gG])\b/g, (_m, val, op) => {
+              if (opt === "FULL_INVERSION") {
+                const invVal = Math.max(
+                  0,
+                  Math.min(1, 1 - parseFloat(val)),
+                ).toFixed(3);
+                return `${invVal} ${op}`;
+              }
+              const avg = (textRgb[0] + textRgb[1] + textRgb[2]) / 3;
+              return `${avg.toFixed(3)} ${op}`;
+            });
+
+            text = text.replace(
+              /\bBT\b/g,
+              `BT\n${textRgb[0].toFixed(3)} ${textRgb[1].toFixed(3)} ${textRgb[2].toFixed(3)} rg\n`,
+            );
+
+            const updatedBytes = new Uint8Array(text.length);
+            for (let idx = 0; idx < text.length; idx++) {
+              updatedBytes[idx] = text.charCodeAt(idx) & 0xff;
+            }
+
+            if (wasCompressed) {
+              const deflated = pako.deflate(updatedBytes);
+              (streamObj as any).updateContents(deflated);
+              (streamObj as any).dict.set(
+                PDFName.of("Filter"),
+                PDFName.of("FlateDecode"),
+              );
+              (streamObj as any).dict.set(
+                PDFName.of("Length"),
+                PDFNumber.of(deflated.length),
+              );
+            } else {
+              (streamObj as any).updateContents(updatedBytes);
+              (streamObj as any).dict.set(
+                PDFName.of("Length"),
+                PDFNumber.of(updatedBytes.length),
+              );
+            }
+          }
+
+          newContentsArray.push(sRef);
+        }
+
+        page.node.set(PDFName.of("Contents"), newContentsArray);
+      }
+
+      if (hasVectorContent) {
+        return await doc.save({ useObjectStreams: true });
+      }
+    } catch (e) {
+      console.warn(
+        "[replaceColor] Vector stream translation failed, falling back to raster:",
+        e,
+      );
+    }
+
     const imagesResult = await ClientPdfEngine.pdfToImages(file, {
       format: "png",
     });
     const invertedImages: File[] = [];
+
+    const targetBgR = Math.round(bgRgb[0] * 255);
+    const targetBgG = Math.round(bgRgb[1] * 255);
+    const targetBgB = Math.round(bgRgb[2] * 255);
+    const targetTextR = Math.round(textRgb[0] * 255);
+    const targetTextG = Math.round(textRgb[1] * 255);
+    const targetTextB = Math.round(textRgb[2] * 255);
 
     for (const imgFile of imagesResult.files) {
       if (imgFile.name.endsWith(".zip")) continue;
@@ -2473,9 +3036,27 @@ export class ClientPdfEngine {
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imgData.data;
           for (let p = 0; p < data.length; p += 4) {
-            data[p] = 255 - data[p];
-            data[p + 1] = 255 - data[p + 1];
-            data[p + 2] = 255 - data[p + 2];
+            const r = data[p];
+            const g = data[p + 1];
+            const b = data[p + 2];
+
+            if (opt === "FULL_INVERSION") {
+              data[p] = 255 - r;
+              data[p + 1] = 255 - g;
+              data[p + 2] = 255 - b;
+            } else {
+              const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+              const invLum = 1 - lum;
+              data[p] = Math.round(
+                targetBgR + (targetTextR - targetBgR) * invLum,
+              );
+              data[p + 1] = Math.round(
+                targetBgG + (targetTextG - targetBgG) * invLum,
+              );
+              data[p + 2] = Math.round(
+                targetBgB + (targetTextB - targetBgB) * invLum,
+              );
+            }
           }
           ctx.putImageData(imgData, 0, 0);
           const blob = await new Promise<Blob>((resolve) =>
@@ -2497,8 +3078,7 @@ export class ClientPdfEngine {
       return await ClientPdfEngine.imagesToPdf(invertedImages);
     }
 
-    const bytes = await file.arrayBuffer();
-    return new Uint8Array(bytes);
+    return new Uint8Array(rawBytes);
   }
 
   /**
@@ -2624,10 +3204,7 @@ export class ClientPdfEngine {
 
     const pageCount = doc.getPageCount();
     const pageNum =
-      Math.max(
-        1,
-        Math.min(pageCount, Number(options?.pageNumber) || 1),
-      ) - 1;
+      Math.max(1, Math.min(pageCount, Number(options?.pageNumber) || 1)) - 1;
     const page = doc.getPage(pageNum);
 
     const signerName = options?.name || "Fold Verified Signer";
@@ -2928,6 +3505,110 @@ export class ClientPdfEngine {
       } finally {
         if (workerDoc) {
           await pdfWorkerManager.destroyDocument(workerDoc);
+        }
+      }
+
+      for (const targetPage of doc.getPages()) {
+        try {
+          const contentsRef = targetPage.node.Contents();
+          if (!contentsRef) continue;
+          const resolvedContents = doc.context.lookup(contentsRef);
+          const streamRefs: any[] = [];
+          if (resolvedContents instanceof PDFArray) {
+            for (let idx = 0; idx < resolvedContents.size(); idx++) {
+              streamRefs.push(resolvedContents.get(idx));
+            }
+          } else {
+            streamRefs.push(contentsRef);
+          }
+
+          for (const sRef of streamRefs) {
+            const streamObj = doc.context.lookup(sRef);
+            if (
+              !streamObj ||
+              typeof (streamObj as any).getContents !== "function"
+            )
+              continue;
+            const streamBytes = (streamObj as any).getContents();
+            if (!streamBytes || streamBytes.length === 0) continue;
+
+            let decompressed: Uint8Array;
+            let wasCompressed = false;
+            try {
+              decompressed = pako.inflate(streamBytes);
+              wasCompressed = true;
+            } catch {
+              decompressed = streamBytes;
+            }
+
+            let streamText = new TextDecoder("latin1").decode(decompressed);
+            let modified = false;
+
+            for (const word of words) {
+              const escWord = word.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+              const litRegex = new RegExp(escWord, "gi");
+              if (litRegex.test(streamText)) {
+                streamText = streamText.replace(
+                  litRegex,
+                  " ".repeat(word.length),
+                );
+                modified = true;
+              }
+
+              const hexAscii = Array.from(word)
+                .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+                .join("");
+              const hexAsciiRegex = new RegExp(hexAscii, "gi");
+              if (hexAsciiRegex.test(streamText)) {
+                streamText = streamText.replace(
+                  hexAsciiRegex,
+                  "20".repeat(word.length),
+                );
+                modified = true;
+              }
+
+              const hexUtf16 = Array.from(word)
+                .map(
+                  (c) => "00" + c.charCodeAt(0).toString(16).padStart(2, "0"),
+                )
+                .join("");
+              const hexUtf16Regex = new RegExp(hexUtf16, "gi");
+              if (hexUtf16Regex.test(streamText)) {
+                streamText = streamText.replace(
+                  hexUtf16Regex,
+                  "0020".repeat(word.length),
+                );
+                modified = true;
+              }
+            }
+
+            if (modified) {
+              const updatedBytes = new Uint8Array(streamText.length);
+              for (let bIdx = 0; bIdx < streamText.length; bIdx++) {
+                updatedBytes[bIdx] = streamText.charCodeAt(bIdx) & 0xff;
+              }
+              if (wasCompressed) {
+                const reDeflated = pako.deflate(updatedBytes);
+                (streamObj as any).updateContents(reDeflated);
+                (streamObj as any).dict.set(
+                  PDFName.of("Filter"),
+                  PDFName.of("FlateDecode"),
+                );
+                (streamObj as any).dict.set(
+                  PDFName.of("Length"),
+                  PDFNumber.of(reDeflated.length),
+                );
+              } else {
+                (streamObj as any).updateContents(updatedBytes);
+                (streamObj as any).dict.set(
+                  PDFName.of("Length"),
+                  PDFNumber.of(updatedBytes.length),
+                );
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[autoRedact] stream purge error:", e);
         }
       }
     }
@@ -3245,9 +3926,13 @@ export class ClientPdfEngine {
       });
     } catch {
       const fallbackBlob = new Blob([new Uint8Array(0)], { type: mimeType });
-      const fallbackFile = new File([fallbackBlob], `${baseName}_scan_1.${ext}`, {
-        type: mimeType,
-      });
+      const fallbackFile = new File(
+        [fallbackBlob],
+        `${baseName}_scan_1.${ext}`,
+        {
+          type: mimeType,
+        },
+      );
       return { files: [fallbackFile], isZip: false };
     }
 

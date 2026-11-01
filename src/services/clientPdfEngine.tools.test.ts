@@ -3,9 +3,11 @@ import {
   PDFDocument,
   PDFName,
   PDFDict,
+  PDFArray,
   StandardFonts,
 } from "@cantoo/pdf-lib";
 import JSZip from "jszip";
+import pako from "pako";
 import { ClientPdfEngine } from "@app/services/clientPdfEngine";
 import { handleClientApiRequest } from "@app/services/clientPdfAdapter";
 import { InternalAxiosRequestConfig } from "axios";
@@ -47,7 +49,9 @@ async function createTestPdfWithField(): Promise<{
 async function createTestPdfWithImage(): Promise<File> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([600, 400]);
-  const imgBytes = Uint8Array.from(atob(PNG_1X1_BASE64), (c) => c.charCodeAt(0));
+  const imgBytes = Uint8Array.from(atob(PNG_1X1_BASE64), (c) =>
+    c.charCodeAt(0),
+  );
   const embeddedImg = await doc.embedPng(imgBytes);
   page.drawImage(embeddedImg, { x: 50, y: 50, width: 100, height: 100 });
   const bytes = await doc.save();
@@ -122,10 +126,15 @@ describe("ClientPdfEngine Tools", () => {
         Subtype: "Link",
         Rect: [20, 20, 80, 40],
       });
-      p2.node.set(PDFName.of("Annots"), doc.context.obj([doc.context.register(linkAnnot)]));
+      p2.node.set(
+        PDFName.of("Annots"),
+        doc.context.obj([doc.context.register(linkAnnot)]),
+      );
 
       const bytes = await doc.save();
-      const file = new File([bytes], "mixed_pages.pdf", { type: "application/pdf" });
+      const file = new File([bytes], "mixed_pages.pdf", {
+        type: "application/pdf",
+      });
       const cleanedBytes = await ClientPdfEngine.removeAnnotations(file);
 
       const loaded = await PDFDocument.load(cleanedBytes);
@@ -219,9 +228,16 @@ describe("ClientPdfEngine Tools", () => {
       const doc = await PDFDocument.create();
       const font = await doc.embedFont(StandardFonts.Helvetica);
       const page = doc.addPage([500, 300]);
-      page.drawText("Quotes: <tag> & 'amp' \"test\"", { x: 50, y: 150, size: 12, font });
+      page.drawText("Quotes: <tag> & 'amp' \"test\"", {
+        x: 50,
+        y: 150,
+        size: 12,
+        font,
+      });
       const bytes = await doc.save();
-      const file = new File([bytes], "special_chars.pdf", { type: "application/pdf" });
+      const file = new File([bytes], "special_chars.pdf", {
+        type: "application/pdf",
+      });
 
       const pptx = await ClientPdfEngine.pdfToPptx(file);
       const zip = await JSZip.loadAsync(await pptx.arrayBuffer());
@@ -255,7 +271,9 @@ describe("ClientPdfEngine Tools", () => {
       expect(outlinesRef).toBeDefined();
 
       const outlinesDict = loaded.context.lookup(outlinesRef, PDFDict);
-      expect(outlinesDict?.get(PDFName.of("Type"))?.toString()).toBe("/Outlines");
+      expect(outlinesDict?.get(PDFName.of("Type"))?.toString()).toBe(
+        "/Outlines",
+      );
       expect(outlinesDict?.get(PDFName.of("First"))).toBeDefined();
       expect(outlinesDict?.get(PDFName.of("Last"))).toBeDefined();
     });
@@ -484,7 +502,10 @@ describe("ClientPdfAdapter Endpoints", () => {
     const { file } = await createTestPdfWithField();
     const formData = new FormData();
     formData.append("fileInput", file);
-    formData.append("data", JSON.stringify({ customerName: "Alice Wonderland" }));
+    formData.append(
+      "data",
+      JSON.stringify({ customerName: "Alice Wonderland" }),
+    );
 
     const config: InternalAxiosRequestConfig = {
       url: "/api/v1/form/fill",
@@ -496,7 +517,9 @@ describe("ClientPdfAdapter Endpoints", () => {
     const res = await handleClientApiRequest(config);
     expect(res?.status).toBe(200);
     const filledDoc = await PDFDocument.load(res?.data);
-    expect(filledDoc.getForm().getTextField("customerName").getText()).toBe("Alice Wonderland");
+    expect(filledDoc.getForm().getTextField("customerName").getText()).toBe(
+      "Alice Wonderland",
+    );
   });
 
   test("validateSignatures returns empty array for unsigned document", async () => {
@@ -526,7 +549,9 @@ describe("ClientPdfAdapter Endpoints", () => {
       location: "Princeton-Plainsboro",
       showSignature: true,
     });
-    const signedFile = new File([signedBytes], "signed.pdf", { type: "application/pdf" });
+    const signedFile = new File([signedBytes], "signed.pdf", {
+      type: "application/pdf",
+    });
 
     const sigs = await ClientPdfEngine.validateSignatures(signedFile);
     expect(sigs.length).toBe(1);
@@ -557,10 +582,15 @@ describe("ClientPdfAdapter Endpoints", () => {
       name: "Alice Signer",
       reason: "Approval",
     });
-    const signedFile = new File([signedBytes], "signed.pdf", { type: "application/pdf" });
+    const signedFile = new File([signedBytes], "signed.pdf", {
+      type: "application/pdf",
+    });
 
-    const strippedBytes = await ClientPdfEngine.removeCertificateSign(signedFile);
-    const strippedFile = new File([strippedBytes], "stripped.pdf", { type: "application/pdf" });
+    const strippedBytes =
+      await ClientPdfEngine.removeCertificateSign(signedFile);
+    const strippedFile = new File([strippedBytes], "stripped.pdf", {
+      type: "application/pdf",
+    });
 
     const sigs = await ClientPdfEngine.validateSignatures(strippedFile);
     expect(sigs.length).toBe(0);
@@ -568,7 +598,9 @@ describe("ClientPdfAdapter Endpoints", () => {
 
   test("compressPdf executes with object streams and handles compression options", async () => {
     const imgFile = await createTestPdfWithImage();
-    const compressed = await ClientPdfEngine.compressPdf(imgFile, { optimizeLevel: 7 });
+    const compressed = await ClientPdfEngine.compressPdf(imgFile, {
+      optimizeLevel: 7,
+    });
     expect(compressed.length).toBeGreaterThan(0);
     const doc = await PDFDocument.load(compressed);
     expect(doc.getPageCount()).toBe(1);
@@ -617,12 +649,15 @@ describe("ClientPdfAdapter Endpoints", () => {
     const doc = await PDFDocument.create();
     const page = doc.addPage([600, 800]);
     const font = await doc.embedFont(StandardFonts.Helvetica);
-    page.drawText("TAX INVOICE\nInvoice Number: INV-2026-001\nTotal Amount Due: $1,450.00\nPayment Terms: Net 30 Days", {
-      x: 50,
-      y: 700,
-      size: 14,
-      font,
-    });
+    page.drawText(
+      "TAX INVOICE\nInvoice Number: INV-2026-001\nTotal Amount Due: $1,450.00\nPayment Terms: Net 30 Days",
+      {
+        x: 50,
+        y: 700,
+        size: 14,
+        font,
+      },
+    );
     const bytes = await doc.save();
     const file = new File([bytes], "invoice.pdf", { type: "application/pdf" });
 
@@ -657,5 +692,242 @@ describe("ClientPdfAdapter Endpoints", () => {
     const pdfOut = await ClientPdfEngine.ocrPdf(file, { sidecar: false });
     expect(pdfOut.isSidecar).toBe(false);
     expect(pdfOut.data instanceof Uint8Array).toBe(true);
+  });
+
+  test("autoRedact purges underlying vector glyphs from content streams", async () => {
+    const file = await createMultiPageTextPdf();
+    const redactedBytes = await ClientPdfEngine.autoRedact(file, {
+      listOfText: "123-45-6789, Secrets",
+      redactColor: "#000000",
+    });
+
+    const doc = await PDFDocument.load(redactedBytes);
+    for (const page of doc.getPages()) {
+      const contentsRef = page.node.Contents();
+      if (!contentsRef) continue;
+      const resolved = doc.context.lookup(contentsRef);
+      const refs =
+        resolved instanceof PDFArray
+          ? Array.from({ length: resolved.size() }, (_, i) => resolved.get(i))
+          : [contentsRef];
+      for (const r of refs) {
+        const st = doc.context.lookup(r);
+        if (st && (st as any).getContents) {
+          let decomp: Uint8Array;
+          try {
+            decomp = pako.inflate((st as any).getContents());
+          } catch {
+            decomp = (st as any).getContents();
+          }
+          const text = new TextDecoder("latin1").decode(decomp);
+          expect(text.includes("123-45-6789")).toBe(false);
+          expect(text.includes("Secrets")).toBe(false);
+        }
+      }
+    }
+  });
+
+  describe("repairPdf", () => {
+    test("recovers PDF with leading garbage preamble before %PDF- header", async () => {
+      const doc = await PDFDocument.create();
+      doc.addPage([300, 300]);
+      const validBytes = await doc.save();
+      const junk = new TextEncoder().encode(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\n\r\n",
+      );
+      const damaged = new Uint8Array(junk.length + validBytes.length);
+      damaged.set(junk, 0);
+      damaged.set(validBytes, junk.length);
+
+      const repaired = await ClientPdfEngine.repairPdf(
+        new File([damaged], "damaged.pdf", { type: "application/pdf" }),
+      );
+      const loaded = await PDFDocument.load(repaired);
+      expect(loaded.getPageCount()).toBe(1);
+    });
+
+    test("recovers truncated PDF missing %%EOF", async () => {
+      const doc = await PDFDocument.create();
+      doc.addPage([300, 300]);
+      const validBytes = await doc.save();
+      const text = new TextDecoder("latin1").decode(validBytes);
+      const eofPos = text.lastIndexOf("%%EOF");
+      const truncated = new TextEncoder().encode(text.substring(0, eofPos));
+
+      const repaired = await ClientPdfEngine.repairPdf(
+        new File([truncated], "truncated.pdf", { type: "application/pdf" }),
+      );
+      const loaded = await PDFDocument.load(repaired);
+      expect(loaded.getPageCount()).toBe(1);
+    });
+
+    test("reconstructs PDF with missing xref table from raw indirect objects", async () => {
+      const doc = await PDFDocument.create();
+      doc.addPage([250, 250]);
+      const validBytes = await doc.save();
+      const text = new TextDecoder("latin1").decode(validBytes);
+      const endObjPos = text.lastIndexOf("endobj");
+      const severed = new TextEncoder().encode(
+        text.substring(0, endObjPos + 6),
+      );
+
+      const repaired = await ClientPdfEngine.repairPdf(
+        new File([severed], "severed.pdf", { type: "application/pdf" }),
+      );
+      const loaded = await PDFDocument.load(repaired);
+      expect(loaded.getPageCount()).toBe(1);
+    });
+  });
+
+  describe("universalConvert & Office / PDF/A conversions", () => {
+    test("xlsxToPdf converts spreadsheet XML into valid PDF", async () => {
+      const zip = new JSZip();
+      zip.file(
+        "xl/sharedStrings.xml",
+        "<sst><si><t>Revenue</t></si><si><t>Expenses</t></si></sst>",
+      );
+      zip.file(
+        "xl/worksheets/sheet1.xml",
+        '<worksheet><sheetData><row><c t="s"><v>0</v></c><c t="s"><v>1</v></c></row><row><c><v>50000</v></c><c><v>25000</v></c></row></sheetData></worksheet>',
+      );
+      const xlsxBuf = await zip.generateAsync({ type: "uint8array" });
+      const xlsxFile = new File([xlsxBuf], "finances.xlsx", {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const converted = await ClientPdfEngine.universalConvert(
+        xlsxFile,
+        "xlsx",
+        "pdf",
+      );
+      expect(converted.length).toBe(1);
+      expect(converted[0].type).toBe("application/pdf");
+
+      const doc = await PDFDocument.load(await converted[0].arrayBuffer());
+      expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
+    });
+
+    test("pptxToPdf converts presentation slides into multi-page landscape PDF", async () => {
+      const zip = new JSZip();
+      zip.file(
+        "ppt/slides/slide1.xml",
+        "<p:sld><cSld><spTree><sp><txBody><a:p><a:r><a:t>Quarterly Review</a:t></a:r></a:p></txBody></sp></spTree></cSld></p:sld>",
+      );
+      zip.file(
+        "ppt/slides/slide2.xml",
+        "<p:sld><cSld><spTree><sp><txBody><a:p><a:r><a:t>Key Achievements &amp; Milestones</a:t></a:r></a:p></txBody></sp></spTree></cSld></p:sld>",
+      );
+      const pptxBuf = await zip.generateAsync({ type: "uint8array" });
+      const pptxFile = new File([pptxBuf], "presentation.pptx", {
+        type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      });
+
+      const converted = await ClientPdfEngine.universalConvert(
+        pptxFile,
+        "pptx",
+        "pdf",
+      );
+      expect(converted.length).toBe(1);
+      expect(converted[0].type).toBe("application/pdf");
+
+      const doc = await PDFDocument.load(await converted[0].arrayBuffer());
+      expect(doc.getPageCount()).toBe(2);
+      const page1 = doc.getPage(0);
+      expect(page1.getWidth()).toBeGreaterThan(page1.getHeight());
+    });
+
+    test("pdfToPdfA embeds ISO PDF/A-1b XMP metadata and OutputIntents with ICC profile", async () => {
+      const file = await createMultiPageTextPdf();
+      const pdfaBytes = await ClientPdfEngine.pdfToPdfA(file);
+
+      const doc = await PDFDocument.load(pdfaBytes);
+      expect(doc.getPageCount()).toBe(2);
+
+      const metaRef = doc.catalog.get(PDFName.of("Metadata"));
+      expect(metaRef).toBeDefined();
+      const metaObj = doc.context.lookup(metaRef);
+      const metaXml = new TextDecoder().decode((metaObj as any).getContents());
+      expect(metaXml).toContain("<pdfaid:part>1</pdfaid:part>");
+      expect(metaXml).toContain("<pdfaid:conformance>B</pdfaid:conformance>");
+
+      const outputIntents = doc.catalog.get(PDFName.of("OutputIntents"));
+      expect(outputIntents).toBeDefined();
+      const oiArray = doc.context.lookup(outputIntents) as PDFArray;
+      expect(oiArray.size()).toBeGreaterThan(0);
+      const firstOi = doc.context.lookup(oiArray.get(0)) as PDFDict;
+      expect(firstOi.get(PDFName.of("S"))).toEqual(PDFName.of("GTS_PDFA1"));
+      expect(firstOi.get(PDFName.of("DestOutputProfile"))).toBeDefined();
+    });
+  });
+
+  describe("replaceColor", () => {
+    test("inverts vector text and artwork in-place without rasterization", async () => {
+      const file = await createMultiPageTextPdf();
+      const replacedBytes = await ClientPdfEngine.replaceColor(file, {
+        replaceAndInvertOption: "FULL_INVERSION",
+      });
+
+      const doc = await PDFDocument.load(replacedBytes);
+      expect(doc.getPageCount()).toBe(2);
+
+      const p1 = doc.getPage(0);
+      const contentsRef = p1.node.Contents();
+      expect(contentsRef).toBeDefined();
+      const contents = doc.context.lookup(contentsRef);
+      expect(contents instanceof PDFArray).toBe(true);
+      expect((contents as PDFArray).size()).toBeGreaterThan(1);
+    });
+
+    test("supports high-contrast color combinations (yellow on black)", async () => {
+      const file = await createMultiPageTextPdf();
+      const replacedBytes = await ClientPdfEngine.replaceColor(file, {
+        replaceAndInvertOption: "HIGH_CONTRAST_COLOR",
+        highContrastColorCombination: "YELLOW_TEXT_ON_BLACK",
+      });
+
+      const doc = await PDFDocument.load(replacedBytes);
+      expect(doc.getPageCount()).toBe(2);
+    });
+  });
+
+  describe("compressPdf advanced optimization", () => {
+    test("strips thumbnails and private metadata dictionaries", async () => {
+      const doc = await PDFDocument.create();
+      const p = doc.addPage([400, 400]);
+      p.node.set(PDFName.of("Thumb"), doc.context.obj({ Type: "XObject" }));
+      p.node.set(PDFName.of("PieceInfo"), doc.context.obj({ Private: true }));
+      doc.catalog.set(
+        PDFName.of("PieceInfo"),
+        doc.context.obj({ DocPrivate: true }),
+      );
+      doc.catalog.set(
+        PDFName.of("SpiderInfo"),
+        doc.context.obj({ WebData: true }),
+      );
+
+      const uncompressedRaw = doc.context.flateStream(
+        new Uint8Array(500).fill(65),
+      );
+      uncompressedRaw.dict.delete(PDFName.of("Filter"));
+      doc.catalog.set(
+        PDFName.of("CustomStream"),
+        doc.context.register(uncompressedRaw),
+      );
+
+      const bytes = await doc.save();
+      const file = new File([bytes], "bloated.pdf", {
+        type: "application/pdf",
+      });
+
+      const compressed = await ClientPdfEngine.compressPdf(file, {
+        optimizeLevel: 9,
+      });
+      const loaded = await PDFDocument.load(compressed);
+
+      expect(loaded.getPage(0).node.has(PDFName.of("Thumb"))).toBe(false);
+      expect(loaded.getPage(0).node.has(PDFName.of("PieceInfo"))).toBe(false);
+      expect(loaded.catalog.has(PDFName.of("PieceInfo"))).toBe(false);
+      expect(loaded.catalog.has(PDFName.of("SpiderInfo"))).toBe(false);
+    });
   });
 });

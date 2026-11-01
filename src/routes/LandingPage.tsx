@@ -175,8 +175,18 @@ export default function LandingPage() {
               onClick={() => setMobileMenuOpen(false)}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-white/70 border border-white/90 text-neutral-800 shadow-xs cursor-pointer active-press hover:bg-white"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -206,8 +216,18 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-neutral-400">02</span>
                 <span>Platforms &amp; OS</span>
               </span>
-              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 text-neutral-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </a>
 
@@ -224,8 +244,18 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-neutral-400">03</span>
                 <span>Documentation</span>
               </span>
-              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 text-neutral-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </a>
 
@@ -242,8 +272,18 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-neutral-400">04</span>
                 <span>Privacy Architecture</span>
               </span>
-              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 text-neutral-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </a>
 
@@ -260,8 +300,18 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-neutral-400">05</span>
                 <span>Terms of Service</span>
               </span>
-              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 text-neutral-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </a>
           </div>
@@ -277,8 +327,18 @@ export default function LandingPage() {
             >
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse-dot" />
               <span>Open Fold (Select Platform)</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
               </svg>
             </button>
             <p className="text-center text-[11px] text-neutral-500 font-mono">

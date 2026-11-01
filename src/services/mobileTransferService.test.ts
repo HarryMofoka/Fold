@@ -199,4 +199,3 @@ describe("mobileTransferService", () => {
     client.close();
   });
 });
-
