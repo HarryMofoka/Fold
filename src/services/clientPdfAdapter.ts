@@ -1,5 +1,6 @@
 import { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from "axios";
 import { ClientPdfEngine } from "@app/services/clientPdfEngine";
+import { getAllLanguageDefinitions } from "@app/utils/languageMapping";
 
 // In-memory sessions for mobile transfers
 const mobileSessions = new Map<
@@ -170,6 +171,17 @@ export async function handleClientApiRequest(
       config,
       { version: "Fold 1.0 (Local-First)", arch: "WebAssembly", status: "UP" },
       "info.json",
+      "application/json",
+    );
+  }
+
+  if (url.includes("/api/v1/ui-data/ocr-pdf")) {
+    return makeResponse(
+      config,
+      {
+        languages: getAllLanguageDefinitions().map((d) => d.ocrCode),
+      },
+      "ocr-languages.json",
       "application/json",
     );
   }

@@ -14,7 +14,7 @@ export interface OCRParameters extends BaseParameters {
 export type OCRParametersHook = BaseParametersHook<OCRParameters>;
 
 export const defaultParameters: OCRParameters = {
-  languages: [],
+  languages: ["eng"],
   ocrType: "skip-text",
   ocrRenderType: "hocr",
   additionalOptions: [],
@@ -24,7 +24,7 @@ export const defaultParameters: OCRParameters = {
  * hook and its operationConfig, so the editor and the pipeline builder agree. */
 export function validateOCRParameters(params: OCRParameters): boolean {
   // At minimum, we need at least one language selected
-  return params.languages.length > 0;
+  return Array.isArray(params.languages) && params.languages.length > 0;
 }
 
 export const useOCRParameters = (): OCRParametersHook => {

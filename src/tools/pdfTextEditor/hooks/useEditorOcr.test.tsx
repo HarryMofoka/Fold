@@ -38,12 +38,16 @@ vi.mock("@app/hooks/tools/shared/useToolResources", () => ({
 vi.mock("@app/tools/pdfTextEditor/util/exportPdf", () => ({
   exportToBlob: mocks.exportPdf,
 }));
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
-    i18n: { language: mocks.locale },
-  }),
-}));
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, fallback?: string) => fallback ?? key,
+      i18n: { language: mocks.locale },
+    }),
+  };
+});
 
 function makeDoc(): EditorDocument {
   return {
