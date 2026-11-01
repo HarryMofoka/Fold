@@ -1,12 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MantineProvider } from "@mantine/core";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,20 +12,12 @@ import type { ProcessingFolderState } from "@app/hooks/useProcessingFolders";
 import { allowConsole } from "@app/tests/failOnConsole";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: { type: "3rdParty", init: () => {} },
   useTranslation: () => ({
-    t: (
-      key: string,
-      fallback?: string | Record<string, unknown>,
-      values?: Record<string, unknown>,
-    ) => {
+    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) => {
       const options = typeof fallback === "object" ? fallback : values;
-      const text =
-        typeof fallback === "string"
-          ? fallback
-          : String(options?.defaultValue ?? key);
-      return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-        String(options?.[name] ?? ""),
-      );
+      const text = typeof fallback === "string" ? fallback : String(options?.defaultValue ?? key);
+      return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name] ?? ""));
     },
   }),
 }));
@@ -138,7 +123,10 @@ vi.mock("@app/services/zipFileService", () => ({
   zipFileService: { extractAllFiles: state.extractAllFiles },
 }));
 vi.mock("@app/services/fileStorage", () => ({
-  fileStorage: { getHistoryChainStubs: vi.fn().mockResolvedValue([]) },
+  fileStorage: {
+    getHistoryChainStubs: vi.fn().mockResolvedValue([]),
+    getStirlingFile: vi.fn().mockResolvedValue(null),
+  },
 }));
 
 const file = (id: string, name: string, folderId: string | null = null) =>
@@ -164,10 +152,7 @@ const folder = (id: string, name: string, extra = {}) =>
     updatedAt: 0,
     ...extra,
   }) as FolderRecord;
-const show = (
-  supportedFormats?: string[],
-  destination?: Parameters<typeof LibraryFilePicker>[0]["destination"],
-) => {
+const show = (supportedFormats?: string[], destination?: Parameters<typeof LibraryFilePicker>[0]["destination"]) => {
   const client = createAppQueryClient();
   return render(
     <MantineProvider env="test">
@@ -179,9 +164,7 @@ const show = (
       />
     </MantineProvider>,
     {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      ),
+      wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
     },
   );
 };
@@ -205,9 +188,7 @@ beforeEach(() => {
     files: state.diskFiles,
     directories: [],
   }));
-  state.readDiskFile.mockImplementation(
-    async (entry: DiskFileEntry) => new File(["PDF"], entry.name),
-  );
+  state.readDiskFile.mockImplementation(async (entry: DiskFileEntry) => new File(["PDF"], entry.name));
 });
 
 describe("library file picker", () => {
@@ -232,17 +213,11 @@ describe("library file picker", () => {
       ]);
       const user = userEvent.setup();
       show();
-      await user.click(
-        screen.getByRole("button", { name: "Stirling library" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Stirling library" }));
       await user.click(screen.getByText("Processing"));
       await waitFor(() => expect(state.listProcessingFiles).toHaveBeenCalled());
-      const queuedItem = screen
-        .getByText(queued.name)
-        .closest('[role="row"], [role="listitem"]')!;
-      await waitFor(() =>
-        expect(queuedItem).toHaveAttribute("aria-disabled", "true"),
-      );
+      const queuedItem = screen.getByText(queued.name).closest('[role="row"], [role="listitem"]')!;
+      await waitFor(() => expect(queuedItem).toHaveAttribute("aria-disabled", "true"));
       await user.dblClick(screen.getByText(queued.name));
       expect(state.selected).not.toHaveBeenCalled();
       await user.click(screen.getByText(done.name));
@@ -251,82 +226,54 @@ describe("library file picker", () => {
     },
   );
 
-  it.each(["list", "grid"] as const)(
-    "sorts Recents by date added and displays that date in %s view",
-    async (viewMode) => {
-      state.viewMode = viewMode;
-      const newlyAdded = {
-        ...file("new", "New.pdf"),
-        createdAt: Date.parse("2026-09-22T10:00:00Z"),
-        lastModified: Date.parse("2000-01-01T10:00:00Z"),
-        remoteStorageId: 1,
-      };
-      const olderUpload = {
-        ...file("old", "Old.pdf"),
-        createdAt: Date.parse("2026-09-01T10:00:00Z"),
-        lastModified: Date.parse("2026-09-20T10:00:00Z"),
-        remoteStorageId: 2,
-      };
-      state.files = [olderUpload, newlyAdded];
-      const user = userEvent.setup();
-      show();
+  it.each(["list", "grid"] as const)("sorts Recents by date added and displays that date in %s view", async (viewMode) => {
+    state.viewMode = viewMode;
+    const newlyAdded = {
+      ...file("new", "New.pdf"),
+      createdAt: Date.parse("2026-09-22T10:00:00Z"),
+      lastModified: Date.parse("2000-01-01T10:00:00Z"),
+      remoteStorageId: 1,
+    };
+    const olderUpload = {
+      ...file("old", "Old.pdf"),
+      createdAt: Date.parse("2026-09-01T10:00:00Z"),
+      lastModified: Date.parse("2026-09-20T10:00:00Z"),
+      remoteStorageId: 2,
+    };
+    state.files = [olderUpload, newlyAdded];
+    const user = userEvent.setup();
+    show();
 
-      const fileOrder = () =>
-        screen.getAllByText(/^(New|Old)\.pdf$/).map((node) => node.textContent);
-      expect(fileOrder()).toEqual(["New.pdf", "Old.pdf"]);
-      expect(
-        screen.getByText(new Date(newlyAdded.createdAt).toLocaleString()),
-      ).toBeVisible();
-      expect(
-        screen.queryByText(new Date(newlyAdded.lastModified).toLocaleString()),
-      ).not.toBeInTheDocument();
-      if (viewMode === "list")
-        expect(
-          screen.getByRole("columnheader", { name: /Added/ }),
-        ).toBeVisible();
+    const fileOrder = () => screen.getAllByText(/^(New|Old)\.pdf$/).map((node) => node.textContent);
+    expect(fileOrder()).toEqual(["New.pdf", "Old.pdf"]);
+    expect(screen.getByText(new Date(newlyAdded.createdAt).toLocaleString())).toBeVisible();
+    expect(screen.queryByText(new Date(newlyAdded.lastModified).toLocaleString())).not.toBeInTheDocument();
+    if (viewMode === "list") expect(screen.getByRole("columnheader", { name: /Added/ })).toBeVisible();
 
-      await user.click(
-        screen.getByRole("button", { name: "Sort files: Recent first" }),
-      );
-      await user.click(screen.getByRole("menuitem", { name: "Oldest first" }));
-      expect(fileOrder()).toEqual(["Old.pdf", "New.pdf"]);
+    await user.click(screen.getByRole("button", { name: "Sort files: Recent first" }));
+    await user.click(screen.getByRole("menuitem", { name: "Oldest first" }));
+    expect(fileOrder()).toEqual(["Old.pdf", "New.pdf"]);
 
-      await user.click(
-        screen.getByRole("button", { name: "Stirling library" }),
-      );
-      expect(fileOrder()).toEqual(["Old.pdf", "New.pdf"]);
-      expect(
-        screen.getByText(new Date(newlyAdded.lastModified).toLocaleString()),
-      ).toBeVisible();
-      if (viewMode === "list")
-        expect(
-          screen.getByRole("columnheader", { name: /Modified/ }),
-        ).toBeVisible();
-    },
-  );
+    await user.click(screen.getByRole("button", { name: "Stirling library" }));
+    expect(fileOrder()).toEqual(["Old.pdf", "New.pdf"]);
+    expect(screen.getByText(new Date(newlyAdded.lastModified).toLocaleString())).toBeVisible();
+    if (viewMode === "list") expect(screen.getByRole("columnheader", { name: /Modified/ })).toBeVisible();
+  });
 
   it("browses server destinations without selecting files or changing the page behind it", async () => {
     const invoices = folder("invoices", "Invoices", { kind: "server" });
-    state.folders = [
-      invoices,
-      folder("browser", "Browser folder"),
-      folder("disk", "Disk folder", { kind: "local" }),
-    ];
+    state.folders = [invoices, folder("browser", "Browser folder"), folder("disk", "Disk folder", { kind: "local" })];
     state.files = [{ ...file("cloud", "Existing.zip"), remoteStorageId: 1 }];
     const onConfirm = vi.fn();
     const user = userEvent.setup();
     show(undefined, { fileCount: 2, onClose: vi.fn(), onConfirm });
 
-    expect(
-      screen.queryByRole("button", { name: "Recents" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recents" })).not.toBeInTheDocument();
     expect(screen.queryByText("Browser folder")).not.toBeInTheDocument();
     expect(screen.queryByText("Disk folder")).not.toBeInTheDocument();
     expect(screen.getByText("Existing.zip")).toBeVisible();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Unzip" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unzip" })).not.toBeInTheDocument();
     await user.dblClick(screen.getByText("Existing.zip"));
     expect(state.selected).not.toHaveBeenCalled();
     await user.click(screen.getByText("Invoices"));
@@ -353,20 +300,11 @@ describe("library file picker", () => {
     const user = userEvent.setup();
     show(undefined, { fileCount: 1, onClose: vi.fn(), onConfirm });
     await user.click(screen.getByRole("button", { name: "New folder" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Folder name" }),
-      created.name,
-    );
+    await user.type(screen.getByRole("textbox", { name: "Folder name" }), created.name);
     await user.click(screen.getByRole("button", { name: "Create" }));
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Add here" }));
-    expect(state.createFolder).toHaveBeenCalledWith(
-      created.name,
-      null,
-      "server",
-    );
+    expect(state.createFolder).toHaveBeenCalledWith(created.name, null, "server");
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith(created.id);
     expect(state.moveFolder).not.toHaveBeenCalled();
   });
@@ -382,18 +320,12 @@ describe("library file picker", () => {
     expect(state.clearDriveError).toHaveBeenCalledOnce();
     view.rerender(
       <MantineProvider env="test">
-        <LibraryFilePicker
-          onBusyChange={vi.fn()}
-          onExternalPickerChange={vi.fn()}
-        />
+        <LibraryFilePicker onBusyChange={vi.fn()} onExternalPickerChange={vi.fn()} />
       </MantineProvider>,
     );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-    expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-      [state.files[0]],
-      [],
-    );
+    expect(state.selected).toHaveBeenCalledExactlyOnceWith([state.files[0]], []);
   });
 
   it("shows the selected file's folder when browsing Recents", async () => {
@@ -404,9 +336,7 @@ describe("library file picker", () => {
 
     await user.click(screen.getByText("Filed.pdf"));
     await user.click(screen.getByRole("button", { name: "Details" }));
-    const details = within(
-      screen.getByRole("complementary", { name: "Details" }),
-    );
+    const details = within(screen.getByRole("complementary", { name: "Details" }));
     await user.click(details.getByRole("button", { name: "File info" }));
 
     expect(details.getByText("Invoices")).toBeVisible();
@@ -435,15 +365,10 @@ describe("library file picker", () => {
       }
       const listing = screen.getByRole(viewMode === "list" ? "grid" : "list");
       expect(within(listing).queryByText("Recents")).not.toBeInTheDocument();
-      await user.click(
-        screen.getByRole("button", { name: "Recents", pressed: false }),
-      );
+      await user.click(screen.getByRole("button", { name: "Recents", pressed: false }));
       expect(screen.getByText("One.pdf")).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Add 2 files" }));
-      expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-        [local, server],
-        [],
-      );
+      expect(state.selected).toHaveBeenCalledExactlyOnceWith([local, server], []);
     },
   );
 
@@ -459,17 +384,13 @@ describe("library file picker", () => {
     expect(screen.getByText("One.pdf")).toBeInTheDocument();
     expect(screen.getByText("Unfiled.pdf")).toBeInTheDocument();
     await user.click(screen.getByText("One.pdf"));
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     expect(screen.queryByText("One.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText("Unfiled.pdf")).not.toBeInTheDocument();
     expect(screen.getByText("Server.pdf")).toBeInTheDocument();
     await user.click(screen.getByText("Invoices"));
     expect(screen.getByText("Filed.pdf")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Recents", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Recents", pressed: false }));
     expect(screen.getByText("One.pdf")).toBeInTheDocument();
     expect(screen.getByText("Unfiled.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
@@ -485,10 +406,7 @@ describe("library file picker", () => {
     );
     const user = userEvent.setup();
     const view = show();
-    const uploads = Array.from(
-      { length: 40 },
-      (_, i) => new File(["PDF"], `Upload${i}.pdf`),
-    );
+    const uploads = Array.from({ length: 40 }, (_, i) => new File(["PDF"], `Upload${i}.pdf`));
     fireEvent.change(view.container.querySelector('input[type="file"]')!, {
       target: { files: uploads },
     });
@@ -511,10 +429,7 @@ describe("library file picker", () => {
     state.files.push(serverFile);
     const user = userEvent.setup();
     const view = show();
-    const uploads = [
-      new File(["PDF"], "New.pdf"),
-      new File(["PDF"], "Other.pdf"),
-    ];
+    const uploads = [new File(["PDF"], "New.pdf"), new File(["PDF"], "Other.pdf")];
     fireEvent.change(view.container.querySelector('input[type="file"]')!, {
       target: { files: uploads },
     });
@@ -526,20 +441,12 @@ describe("library file picker", () => {
     expect(screen.queryByText("Other.pdf")).not.toBeInTheDocument();
     await user.click(screen.getByText("Server.pdf"));
     await user.click(screen.getByRole("button", { name: "Add 3 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-        [serverFile],
-        uploads,
-      ),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledExactlyOnceWith([serverFile], uploads));
   });
 
   it("keeps server files reachable with the source filter while browsing folders", async () => {
     state.storageEnabled = true;
-    state.folders = [
-      folder("browser", "Browser folder"),
-      folder("server-folder", "Server folder", { kind: "server" }),
-    ];
+    state.folders = [folder("browser", "Browser folder"), folder("server-folder", "Server folder", { kind: "server" })];
     state.files = [
       { ...file("root", "Root.pdf"), remoteStorageId: 1 },
       {
@@ -554,15 +461,11 @@ describe("library file picker", () => {
     ];
     const user = userEvent.setup();
     const view = show();
-    expect(
-      screen.queryByRole("button", { name: "Cloud" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cloud" })).not.toBeInTheDocument();
     fireEvent.change(view.container.querySelector('input[type="file"]')!, {
       target: { files: [new File(["PDF"], "New.pdf")] },
     });
-    await user.click(
-      screen.getAllByRole("button", { name: "Stirling library" })[0],
-    );
+    await user.click(screen.getAllByRole("button", { name: "Stirling library" })[0]);
     await user.click(screen.getByRole("textbox", { name: "Filter by source" }));
     await user.click(await screen.findByRole("option", { name: "Cloud" }));
     expect(screen.getByText("Root.pdf")).toBeInTheDocument();
@@ -573,9 +476,7 @@ describe("library file picker", () => {
     await user.click(screen.getByText("Server folder"));
     expect(screen.getByText("Nested.pdf")).toBeInTheDocument();
     expect(screen.queryByText("New.pdf")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("textbox", { name: "Filter by source" }),
-    ).toHaveValue("Cloud");
+    expect(screen.getByRole("textbox", { name: "Filter by source" })).toHaveValue("Cloud");
   });
 
   it("shows a readable error when a dropped file cannot be read", async () => {
@@ -586,9 +487,7 @@ describe("library file picker", () => {
         types: ["Files"],
       },
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Could not read a dropped file.",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not read a dropped file.");
     expect(state.selected).not.toHaveBeenCalled();
   });
 
@@ -605,9 +504,7 @@ describe("library file picker", () => {
         types: ["Files"],
       },
     });
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Could not read a dropped file.",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not read a dropped file.");
     expect(await screen.findByText("Dropped.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
     expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [file]);
@@ -628,25 +525,16 @@ describe("library file picker", () => {
       lastModified: 1,
     }));
     const readable = new File(["PDF"], "Readable.pdf");
-    state.readDiskFile.mockImplementation(async (entry: DiskFileEntry) =>
-      entry.name === "Missing.pdf" ? null : readable,
-    );
+    state.readDiskFile.mockImplementation(async (entry: DiskFileEntry) => (entry.name === "Missing.pdf" ? null : readable));
     const user = userEvent.setup();
     show();
     await user.click(screen.getByText("One.pdf"));
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     await user.click(screen.getByText("Documents"));
     await user.click(await screen.findByText("Missing.pdf"));
     await user.click(screen.getByText("Readable.pdf"));
     await user.click(screen.getByRole("button", { name: "Add 3 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-        [state.files[0]],
-        [readable],
-      ),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledExactlyOnceWith([state.files[0]], [readable]));
     expect(state.close).toHaveBeenCalledOnce();
     expect(state.alert).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ body: "Missing.pdf is no longer available." }),
@@ -661,11 +549,7 @@ describe("library file picker", () => {
       const dropped = new File(["PDF"], "Dropped.pdf", {
         type: "application/pdf",
       });
-      const getFile = vi
-        .fn()
-        .mockRejectedValue(
-          new DOMException("File-system access denied", "NotAllowedError"),
-        );
+      const getFile = vi.fn().mockRejectedValue(new DOMException("File-system access denied", "NotAllowedError"));
       const getAsFileSystemHandle = vi.fn().mockResolvedValue({ getFile });
       const dataTransfer = {
         files: [dropped],
@@ -679,19 +563,14 @@ describe("library file picker", () => {
         ],
         types: ["Files"],
       };
-      fireEvent.drop(
-        view.container.querySelector(".library-picker-dropzone")!,
-        {
-          dataTransfer,
-        },
-      );
+      fireEvent.drop(view.container.querySelector(".library-picker-dropzone")!, {
+        dataTransfer,
+      });
       expect(await screen.findByText("Dropped.pdf")).toBeInTheDocument();
       expect(getAsFileSystemHandle).not.toHaveBeenCalled();
       expect(state.selected).not.toHaveBeenCalled();
       await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-      await waitFor(() =>
-        expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [dropped]),
-      );
+      await waitFor(() => expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [dropped]));
     } finally {
       vi.unstubAllGlobals();
     }
@@ -718,9 +597,7 @@ describe("library file picker", () => {
     expect(await screen.findByText("Extracted.pdf")).toBeInTheDocument();
     expect(state.selected).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [extracted]),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [extracted]));
   });
   it("restores each tab's folder and filters while keeping the cross-folder selection", async () => {
     state.folders = [folder("folder", "Invoices")];
@@ -728,60 +605,34 @@ describe("library file picker", () => {
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-      "One",
-    );
+    await user.type(screen.getByRole("textbox", { name: "Search filenames" }), "One");
     await user.click(screen.getByRole("textbox", { name: "Filter by source" }));
     await user.click(await screen.findByRole("option", { name: "Local" }));
     await user.click(screen.getByText("One.pdf"));
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     await user.click(screen.getByText("Invoices"));
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-      "Two",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Recents", pressed: false }),
-    );
+    await user.type(screen.getByRole("textbox", { name: "Search filenames" }), "Two");
+    await user.click(screen.getByRole("button", { name: "Recents", pressed: false }));
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    expect(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-    ).toHaveValue("One");
-    expect(
-      screen.getByRole("textbox", { name: "Filter by source" }),
-    ).toHaveValue("Local");
+    expect(screen.getByRole("textbox", { name: "Search filenames" })).toHaveValue("One");
+    expect(screen.getByRole("textbox", { name: "Filter by source" })).toHaveValue("Local");
     expect(screen.getByText("One.pdf")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    expect(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-    ).toHaveValue("Two");
-    expect(
-      screen.getByRole("textbox", { name: "Filter by source" }),
-    ).toHaveValue("All sources");
-    expect(
-      screen.getByRole("button", { name: "Invoices" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Search filenames" })).toHaveValue("Two");
+    expect(screen.getByRole("textbox", { name: "Filter by source" })).toHaveValue("All sources");
+    expect(screen.getByRole("button", { name: "Invoices" })).toBeInTheDocument();
     await user.click(screen.getByText("Two.pdf"));
     await user.click(screen.getByRole("button", { name: "Add 2 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledWith(state.files, []),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledWith(state.files, []));
     expect(state.moveFolder).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("File actions")).not.toBeInTheDocument();
   });
 
   it("keeps the header partially selected when the selection limit leaves eligible files unselected", async () => {
     state.maxSelectable = 2;
-    state.files = Array.from({ length: 10 }, (_, i) =>
-      file(`file-${i}`, `File ${i}.pdf`),
-    );
+    state.files = Array.from({ length: 10 }, (_, i) => file(`file-${i}`, `File ${i}.pdf`));
     const user = userEvent.setup();
     show(["pdf"]);
 
@@ -803,9 +654,7 @@ describe("library file picker", () => {
     const user = userEvent.setup();
     show(["pdf"]);
     await user.click(screen.getByRole("checkbox", { name: "Select all" }));
-    expect(
-      screen.getByRole("checkbox", { name: "Clear selection" }),
-    ).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Clear selection" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Add 2 files" })).toBeEnabled();
   });
 
@@ -814,15 +663,11 @@ describe("library file picker", () => {
     state.files.push(file("text", "Notes.txt"));
     const user = userEvent.setup();
     show(["pdf"]);
-    expect(
-      screen.getByText("Notes.txt").closest('[role="row"]'),
-    ).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Notes.txt").closest('[role="row"]')).toHaveAttribute("aria-disabled", "true");
     await user.click(screen.getByLabelText("Select all"));
     await user.click(screen.getByText("Two.pdf"));
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledWith([state.files[1]], []),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledWith([state.files[1]], []));
   });
 
   it("stages imports until confirmation and discards them on cancellation", async () => {
@@ -851,12 +696,7 @@ describe("library file picker", () => {
       target: { files: [upload] },
     });
     await user.click(screen.getByRole("button", { name: "Add 2 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-        [state.files[0]],
-        [upload],
-      ),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledExactlyOnceWith([state.files[0]], [upload]));
   });
 
   it("stages each file once across duplicate entries and repeated imports", async () => {
@@ -866,8 +706,7 @@ describe("library file picker", () => {
     const duplicate = new File(["PDF"], "Duplicate.pdf", { lastModified: 123 });
     const input = view.container.querySelector('input[type="file"]')!;
     fireEvent.change(input, { target: { files: [upload, duplicate] } });
-    const { pendingFilePathMappings } =
-      await import("@app/services/pendingFilePathMappings");
+    const { pendingFilePathMappings } = await import("@app/services/pendingFilePathMappings");
     pendingFilePathMappings.set(duplicate, "C:/Documents/Duplicate.pdf");
     fireEvent.change(input, { target: { files: [duplicate] } });
 
@@ -881,8 +720,7 @@ describe("library file picker", () => {
     const user = userEvent.setup();
     const view = show();
     const upload = new File(["PDF"], "Native.pdf");
-    const { pendingFilePathMappings } =
-      await import("@app/services/pendingFilePathMappings");
+    const { pendingFilePathMappings } = await import("@app/services/pendingFilePathMappings");
     const path = Promise.resolve("C:/Documents/Native.pdf");
     pendingFilePathMappings.set(upload, path);
     const input = view.container.querySelector('input[type="file"]')!;
@@ -895,9 +733,7 @@ describe("library file picker", () => {
   });
 
   it("clears native selections from multiple folders in the selected-only view", async () => {
-    state.folders = ["A", "B"].map((name) =>
-      folder(name, name, { kind: "local", directory: `C:/${name}` }),
-    );
+    state.folders = ["A", "B"].map((name) => folder(name, name, { kind: "local", directory: `C:/${name}` }));
     state.listDirectory.mockImplementation(async (directory: string) => ({
       files: [
         {
@@ -911,17 +747,11 @@ describe("library file picker", () => {
     }));
     const user = userEvent.setup();
     show();
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     await user.click(screen.getByText("A", { exact: true }));
     await user.click(await screen.findByText("A.pdf"));
-    expect(
-      screen.getAllByRole("button", { name: "Stirling library" }),
-    ).toHaveLength(1);
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: true }),
-    );
+    expect(screen.getAllByRole("button", { name: "Stirling library" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: true }));
     await user.click(screen.getByText("B", { exact: true }));
     await user.click(await screen.findByText("B.pdf"));
     await user.click(screen.getByRole("button", { name: "2 selected" }));
@@ -952,9 +782,7 @@ describe("library file picker", () => {
     );
     const user = userEvent.setup();
     const view = show();
-    await user.click(
-      screen.getByRole("button", { name: "Stirling library", pressed: false }),
-    );
+    await user.click(screen.getByRole("button", { name: "Stirling library", pressed: false }));
     await user.click(screen.getByText("Documents"));
     await user.click(await screen.findByText("Disk.pdf"));
     expect(state.readDiskFile).not.toHaveBeenCalled();
@@ -967,8 +795,7 @@ describe("library file picker", () => {
     await waitFor(() => expect(state.selected).toHaveBeenCalled());
     expect(state.selected).toHaveBeenCalledExactlyOnceWith([], [diskFile]);
     expect(state.readDiskFile).toHaveBeenCalledWith(state.diskFiles[0]);
-    const { pendingFilePathMappings } =
-      await import("@app/services/pendingFilePathMappings");
+    const { pendingFilePathMappings } = await import("@app/services/pendingFilePathMappings");
     const imported = state.selected.mock.calls[0][1][0];
     expect(pendingFilePathMappings.get(imported)).toBe("C:/Documents/Disk.pdf");
   });
@@ -982,10 +809,7 @@ describe("library file picker", () => {
     show();
     expect(screen.getByText("File59.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-      "File59",
-    );
+    await user.type(screen.getByRole("textbox", { name: "Search filenames" }), "File59");
     expect(await screen.findByText("File59.pdf")).toBeInTheDocument();
     expect(screen.queryByText("File0.pdf")).not.toBeInTheDocument();
   });
@@ -995,9 +819,7 @@ describe("library file picker", () => {
     show();
     await user.click(screen.getByText("One.pdf"));
     const trigger = screen.getByRole("button", { name: "Search filenames" });
-    expect(
-      screen.queryByRole("textbox", { name: "Search filenames" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Search filenames" })).not.toBeInTheDocument();
     await user.click(trigger);
     const search = screen.getByRole("textbox", {
       name: "Search filenames",
@@ -1020,73 +842,48 @@ describe("library file picker", () => {
       window.removeEventListener("keydown", onPageKeyDown);
     }
     await waitFor(() => expect(trigger).toHaveFocus());
-    expect(
-      screen.queryByRole("textbox", { name: "Search filenames" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Search filenames" })).not.toBeInTheDocument();
     expect(screen.queryByText("One.pdf")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Name" }));
     await user.click(trigger);
-    expect(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-    ).toHaveValue("Two");
+    expect(screen.getByRole("textbox", { name: "Search filenames" })).toHaveValue("Two");
     await user.click(screen.getByRole("button", { name: "Clear search" }));
-    expect(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-    ).toHaveFocus();
+    expect(screen.getByRole("textbox", { name: "Search filenames" })).toHaveFocus();
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-    expect(state.selected).toHaveBeenCalledExactlyOnceWith(
-      [state.files[0]],
-      [],
-    );
+    expect(state.selected).toHaveBeenCalledExactlyOnceWith([state.files[0]], []);
   });
 
   it("keeps the search when switching layouts and sorts through the compact menu", async () => {
     const user = userEvent.setup();
     const view = show();
     await user.click(screen.getByRole("button", { name: "Search filenames" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-      "One",
-    );
+    await user.type(screen.getByRole("textbox", { name: "Search filenames" }), "One");
     state.viewMode = "grid";
     view.rerender(
       <MantineProvider env="test">
-        <LibraryFilePicker
-          onBusyChange={vi.fn()}
-          onExternalPickerChange={vi.fn()}
-        />
+        <LibraryFilePicker onBusyChange={vi.fn()} onExternalPickerChange={vi.fn()} />
       </MantineProvider>,
     );
-    expect(
-      screen.getByRole("textbox", { name: "Search filenames" }),
-    ).toHaveValue("One");
+    expect(screen.getByRole("textbox", { name: "Search filenames" })).toHaveValue("One");
     expect(screen.queryByText("Two.pdf")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Clear search" }));
-    await user.click(
-      screen.getByRole("button", { name: "Sort files: Recent first" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Sort files: Recent first" }));
     await user.click(screen.getByRole("menuitem", { name: "Name Z→A" }));
     const cards = screen.getAllByRole("listitem");
     expect(cards[0]).toHaveTextContent("Two.pdf");
     expect(cards[1]).toHaveTextContent("One.pdf");
-    expect(
-      screen.getByRole("button", { name: "Sort files: Name Z→A" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort files: Name Z→A" })).toBeInTheDocument();
   });
 
   it("uses the shared grid with keyboard selection and no management menus", async () => {
     state.viewMode = "grid";
     const user = userEvent.setup();
     show();
-    const card = screen
-      .getByText("One.pdf")
-      .closest('[role="listitem"]') as HTMLElement;
+    const card = screen.getByText("One.pdf").closest('[role="listitem"]') as HTMLElement;
     act(() => card.focus());
     await user.keyboard(" ");
     await user.click(screen.getByRole("button", { name: "Add 1 files" }));
-    await waitFor(() =>
-      expect(state.selected).toHaveBeenCalledWith([state.files[0]], []),
-    );
+    await waitFor(() => expect(state.selected).toHaveBeenCalledWith([state.files[0]], []));
     expect(screen.queryByLabelText("File actions")).not.toBeInTheDocument();
   });
 });

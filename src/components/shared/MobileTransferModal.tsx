@@ -1,5 +1,5 @@
 import { ReactNode, useRef } from "react";
-import { Modal, Stack, Text, Box, Alert, Badge } from "@mantine/core";
+import { Modal, Stack, Text, Box, Alert, Badge, Loader } from "@mantine/core";
 import { Button } from "@app/ui/Button";
 import { useIsMobile } from "@app/hooks/useIsMobile";
 import { QRCodeSVG } from "qrcode.react";
@@ -70,20 +70,14 @@ export default function MobileTransferModal({
 
   const effectiveQrSize = isMobile ? Math.min(qrSize, 180) : qrSize;
 
-  const {
-    mobileUrl,
-    filesReceived,
-    error,
-    timeRemaining,
-    showExpiryWarning,
-    isDeviceConnected,
-  } = useMobileTransferSession({
-    active: opened,
-    routePath,
-    onFileReceived,
-    sessionCreateErrorMessage,
-    pollingErrorMessage,
-  });
+  const { mobileUrl, filesReceived, error, timeRemaining, showExpiryWarning, isDeviceConnected, isTransferring } =
+    useMobileTransferSession({
+      active: opened,
+      routePath,
+      onFileReceived,
+      sessionCreateErrorMessage,
+      pollingErrorMessage,
+    });
 
   return (
     <Modal
@@ -95,35 +89,23 @@ export default function MobileTransferModal({
       radius="lg"
       zIndex={Z_INDEX_OVER_FILE_MANAGER_MODAL}
       overlayProps={{ opacity: 0.35, blur: 2 }}
+      closeOnClickOutside={!isTransferring}
+      closeOnEscape={!isTransferring}
       styles={{ body: { paddingTop: "1.5rem" } }}
     >
       <Stack gap="md">
-        <Alert
-          icon={<Icon name="info" size={"1rem"} />}
-          color="blue"
-          variant="light"
-        >
+        <Alert icon={<Icon name="info" size={"1rem"} />} color="blue" variant="light">
           <Text size="sm">{description}</Text>
         </Alert>
 
         {showExpiryWarning && timeRemaining !== null && (
-          <Alert
-            icon={<Icon name="triangle-alert" size={"1rem"} />}
-            title={expiryWarningTitle}
-            color="orange"
-          >
-            <Text size="sm">
-              {formatExpiryWarning(Math.ceil(timeRemaining / 1000))}
-            </Text>
+          <Alert icon={<Icon name="triangle-alert" size={"1rem"} />} title={expiryWarningTitle} color="orange">
+            <Text size="sm">{formatExpiryWarning(Math.ceil(timeRemaining / 1000))}</Text>
           </Alert>
         )}
 
         {error && (
-          <Alert
-            icon={<Icon name="circle-alert" size={"1rem"} />}
-            title={errorTitle}
-            color="red"
-          >
+          <Alert icon={<Icon name="circle-alert" size={"1rem"} />} title={errorTitle} color="red">
             <Text size="sm">{error}</Text>
           </Alert>
         )}
@@ -155,10 +137,7 @@ export default function MobileTransferModal({
               {t("mobileTransfer.directUpload", "Upload from this device")}
             </Button>
             <Text size="xs" c="dimmed" ta="center">
-              {t(
-                "mobileTransfer.orScanAnother",
-                "Or scan below with another device",
-              )}
+              {t("mobileTransfer.orScanAnother", "Or scan below with another device")}
             </Text>
           </Box>
         )}
@@ -179,42 +158,32 @@ export default function MobileTransferModal({
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           >
-            <QRCodeSVG
-              value={mobileUrl}
-              size={effectiveQrSize}
-              level="H"
-              includeMargin
-              title={qrTitle}
-            />
+            <QRCodeSVG value={mobileUrl} size={effectiveQrSize} level="H" includeMargin title={qrTitle} />
           </Box>
 
-          {isDeviceConnected ? (
-            <Badge
-              variant="filled"
-              color="green"
-              size="md"
-              leftSection={<Icon name="check" size="0.9rem" />}
-            >
+          {isTransferring ? (
+            <Badge variant="filled" color="blue" size="md" leftSection={<Loader size="xs" color="white" />}>
+              {t("mobileTransfer.transferring", "Receiving file…")}
+            </Badge>
+          ) : isDeviceConnected ? (
+            <Badge variant="filled" color="green" size="md" leftSection={<Icon name="check" size="0.9rem" />}>
               {t("mobileTransfer.deviceConnected", "Phone connected")}
             </Badge>
           ) : (
-            <Badge
-              variant="light"
-              color="gray"
-              size="sm"
-              leftSection={<Icon name="scan" size="0.85rem" />}
-            >
-              {t(
-                "mobileTransfer.waitingForScan",
-                "Scan code with phone camera",
-              )}
+            <Badge variant="light" color="gray" size="sm" leftSection={<Icon name="scan" size="0.85rem" />}>
+              {t("mobileTransfer.waitingForScan", "Scan code with phone camera")}
             </Badge>
           )}
 
           {filesReceived > 0 && renderReceived?.(filesReceived)}
 
           <Text size="xs" c="dimmed" ta="center" style={{ maxWidth: "300px" }}>
-            {instructions}
+            {filesReceived > 0
+              ? t(
+                  "mobileTransfer.keepScanningOrDone",
+                  "Keep this window open while scanning. You can send multiple files from your phone.",
+                )
+              : instructions}
           </Text>
 
           <Text
@@ -228,6 +197,25 @@ export default function MobileTransferModal({
           >
             {mobileUrl}
           </Text>
+
+          {filesReceived > 0 ? (
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              disabled={isTransferring}
+              onClick={onClose}
+              leftSection={<Icon name="check" size="1.1rem" />}
+            >
+              {t("mobileTransfer.doneWithCount", "Done ({{count}} received)", {
+                count: filesReceived,
+              })}
+            </Button>
+          ) : (
+            <Button variant="secondary" accent="neutral" size="sm" fullWidth onClick={onClose}>
+              {t("cancel", "Cancel")}
+            </Button>
+          )}
         </Box>
       </Stack>
     </Modal>

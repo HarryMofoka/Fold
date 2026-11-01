@@ -45,9 +45,7 @@ function generateSessionId(): string {
   }
 
   // If Web Crypto is not available, fail fast rather than using insecure randomness
-  throw new Error(
-    "Web Crypto API not available. Cannot generate secure session ID.",
-  );
+  throw new Error("Web Crypto API not available. Cannot generate secure session ID.");
 }
 
 export interface MobileTransferSessionInfo {
@@ -79,13 +77,13 @@ export function useMobileTransferSession({
 }: UseMobileTransferSessionParams) {
   const { config } = useAppConfig();
   const [sessionId, setSessionId] = useState(() => generateSessionId());
-  const [sessionInfo, setSessionInfo] =
-    useState<MobileTransferSessionInfo | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<MobileTransferSessionInfo | null>(null);
   const [filesReceived, setFilesReceived] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const [isDeviceConnected, setIsDeviceConnected] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
   const pollIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
   const processedFiles = useRef<Set<string>>(new Set());
@@ -99,9 +97,7 @@ export function useMobileTransferSession({
   // The QR-code URL the phone opens. It must land on the public route under
   // the app's base path, otherwise the phone hits the auth-gated catch-all
   // route and is bounced to the login page.
-  const configuredUrl =
-    localStorage.getItem("server_url") ||
-    (import.meta.env.DEV ? "" : config?.frontendUrl || "");
+  const configuredUrl = localStorage.getItem("server_url") || (import.meta.env.DEV ? "" : config?.frontendUrl || "");
   const mobileUrl = buildMobileRouteUrl({
     configuredUrl,
     sessionId,
@@ -147,9 +143,7 @@ export function useMobileTransferSession({
     if (!active) return;
 
     try {
-      const response = await apiClient.get(
-        `/api/v1/mobile-scanner/files/${sessionId}`,
-      );
+      const response = await apiClient.get(`/api/v1/mobile-scanner/files/${sessionId}`);
       if (!response.status || response.status !== 200) {
         throw new Error("Failed to check for files");
       }
@@ -157,46 +151,32 @@ export function useMobileTransferSession({
       const files = response.data.files || [];
 
       // Download only files we haven't processed yet
-      const newFiles = files.filter(
-        (f: MobileScannerFile) => !processedFiles.current.has(f.filename),
-      );
+      const newFiles = files.filter((f: MobileScannerFile) => !processedFiles.current.has(f.filename));
       if (newFiles.length === 0) return;
 
-      for (const fileMetadata of newFiles) {
-        try {
-          const downloadResponse = await apiClient.get(
-            `/api/v1/mobile-scanner/download/${sessionId}/${fileMetadata.filename}`,
-            { responseType: "blob" },
-          );
-
-          if (downloadResponse.status === 200) {
-            const file = new File(
-              [downloadResponse.data],
-              fileMetadata.filename,
-              { type: fileMetadata.contentType || "image/jpeg" },
-            );
-            processedFiles.current.add(fileMetadata.filename);
-            setFilesReceived((prev) => prev + 1);
-            await onFileReceivedRef.current(file);
-          }
-        } catch (err) {
-          console.error(
-            "[useMobileTransferSession] download failed:",
-            fileMetadata.filename,
-            err,
-          );
-        }
-      }
-
-      // Delete the entire session immediately after downloading, so uploads
-      // sit on the server only for the seconds between polls.
+      setIsTransferring(true);
       try {
-        await apiClient.delete(`/api/v1/mobile-scanner/session/${sessionId}`);
-      } catch (cleanupErr) {
-        console.warn(
-          "[useMobileTransferSession] post-download cleanup failed:",
-          cleanupErr,
-        );
+        for (const fileMetadata of newFiles) {
+          try {
+            const downloadResponse = await apiClient.get(
+              `/api/v1/mobile-scanner/download/${sessionId}/${fileMetadata.filename}`,
+              { responseType: "blob" },
+            );
+
+            if (downloadResponse.status === 200) {
+              const file = new File([downloadResponse.data], fileMetadata.filename, {
+                type: fileMetadata.contentType || "image/jpeg",
+              });
+              processedFiles.current.add(fileMetadata.filename);
+              setFilesReceived((prev) => prev + 1);
+              await onFileReceivedRef.current(file);
+            }
+          } catch (err) {
+            console.error("[useMobileTransferSession] download failed:", fileMetadata.filename, err);
+          }
+        }
+      } finally {
+        setIsTransferring(false);
       }
     } catch (err) {
       console.error("[useMobileTransferSession] polling failed:", err);
@@ -225,9 +205,7 @@ export function useMobileTransferSession({
     return () => {
       apiClient
         .delete(`/api/v1/mobile-scanner/session/${sessionId}`)
-        .catch((err) =>
-          console.warn("[useMobileTransferSession] cleanup failed:", err),
-        );
+        .catch((err) => console.warn("[useMobileTransferSession] cleanup failed:", err));
     };
   }, [active, sessionId, createSession]);
 
@@ -244,10 +222,16 @@ export function useMobileTransferSession({
       setIsDeviceConnected(connected);
     });
 
+    const unsubscribeTransfer = host.onTransferStateChange((receiving) => {
+      setIsTransferring(receiving);
+    });
+
     return () => {
       unsubscribe();
+      unsubscribeTransfer();
       host.close();
       setIsDeviceConnected(false);
+      setIsTransferring(false);
     };
   }, [active, sessionId]);
 
@@ -310,5 +294,7 @@ export function useMobileTransferSession({
     regenerateSession,
     /** True when a mobile device is connected via P2P. */
     isDeviceConnected,
+    /** True while a file is actively being transferred. */
+    isTransferring,
   };
 }

@@ -19,10 +19,7 @@ import { useFolderFileStates } from "@app/components/filesPage/useFolderFileStat
 import { pendingFilePathMappings } from "@app/services/pendingFilePathMappings";
 import { createQuickKey } from "@app/types/fileContext";
 import { useIsMobile } from "@app/hooks/useIsMobile";
-import {
-  FileGrid,
-  type FilesPageEntry,
-} from "@app/components/filesPage/FileGrid";
+import { FileGrid, type FilesPageEntry } from "@app/components/filesPage/FileGrid";
 import { LibraryToolbar } from "@app/components/filesPage/LibraryToolbar";
 import { LibraryTabs } from "@app/components/filesPage/LibraryTabs";
 import { FolderNameDialog } from "@app/components/filesPage/FolderNameDialog";
@@ -32,28 +29,17 @@ import { FileDetailsPanel } from "@app/components/filesPage/FileDetailsPanel";
 import { libraryEntries } from "@app/components/filesPage/libraryEntries";
 import { useLibraryFiles } from "@app/components/filesPage/useLibraryFiles";
 import { useDiskFolder } from "@app/components/filesPage/useDiskFolder";
-import {
-  addPickerItems,
-  pickerKey,
-  supportsPickerFile,
-  type PickerItem,
-} from "@app/components/filesPage/pickerSelection";
+import { addPickerItems, pickerKey, supportsPickerFile, type PickerItem } from "@app/components/filesPage/pickerSelection";
 import MobileUploadModal from "@app/components/shared/MobileUploadModal";
 import { openFilesFromDisk } from "@app/services/openFilesFromDisk";
 import { readDiskFile } from "@app/services/localFolderContents";
 import { zipFileService } from "@app/services/zipFileService";
-import {
-  createNewStirlingFileStub,
-  type StirlingFileStub,
-} from "@app/types/fileContext";
+import { createNewStirlingFileStub, type StirlingFileStub } from "@app/types/fileContext";
 import type { FileId } from "@app/types/file";
 import { folderKind, type FolderId } from "@app/types/folder";
 import { getFolderChain } from "@app/utils/folderPath";
 import { useDropzoneFiles } from "@app/hooks/useDropzoneFiles";
-import {
-  Z_INDEX_FILE_MANAGER_MODAL,
-  Z_INDEX_OVER_FILE_MANAGER_MODAL,
-} from "@app/styles/zIndex";
+import { Z_INDEX_FILE_MANAGER_MODAL, Z_INDEX_OVER_FILE_MANAGER_MODAL } from "@app/styles/zIndex";
 import "@app/components/filesPage/FilesPage.css";
 import "@app/components/filesPage/LibraryFilePicker.css";
 
@@ -70,23 +56,14 @@ interface Props {
 }
 
 /** Shares the library's data and browser; navigation and uncommitted selections belong to this modal. */
-export function LibraryFilePicker({
-  supportedFormats,
-  onBusyChange,
-  onExternalPickerChange,
-  destination,
-}: Props) {
+export function LibraryFilePicker({ supportedFormats, onBusyChange, onExternalPickerChange, destination }: Props) {
   const { t } = useTranslation();
-  const { closeFilesModal, onRecentFileSelect, maxSelectable, loadFiles } =
-    useFilesModalContext();
+  const { closeFilesModal, onRecentFileSelect, maxSelectable, loadFiles } = useFilesModalContext();
   const library = useFilesPage();
   const close = destination?.onClose ?? closeFilesModal;
   const folders = useFolders();
   const { fileIds: activeFileIds } = useAllFiles();
-  const activeWorkspaceFileIds = useMemo(
-    () => new Set<string>(activeFileIds),
-    [activeFileIds],
-  );
+  const activeWorkspaceFileIds = useMemo(() => new Set<string>(activeFileIds), [activeFileIds]);
   const { config } = useAppConfig();
   const { sharingEnabled } = useSharingEnabled();
   const drive = useGoogleDrivePicker();
@@ -107,12 +84,8 @@ export function LibraryFilePicker({
     setTypeFilter,
   } = useLibraryViewState(destination ? "all" : "recent");
   const browserRef = useRef<HTMLDivElement>(null);
-  const [selection, setSelection] = useState<Map<string, PickerItem>>(
-    () => new Map(),
-  );
-  const [uploads, setUploads] = useState<
-    Map<FileId, Extract<PickerItem, { kind: "upload" }>>
-  >(() => new Map());
+  const [selection, setSelection] = useState<Map<string, PickerItem>>(() => new Map());
+  const [uploads, setUploads] = useState<Map<FileId, Extract<PickerItem, { kind: "upload" }>>>(() => new Map());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -123,25 +96,15 @@ export function LibraryFilePicker({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const lastSelected = useRef<string | null>(null);
-  const currentFolder = currentFolderId
-    ? folders.foldersById.get(currentFolderId)
-    : undefined;
-  const directory =
-    currentFolder && folderKind(currentFolder) === "local"
-      ? currentFolder.directory
-      : undefined;
-  const { diskEntries, diskLoading } = useDiskFolder(
-    directory,
-    currentFolderId,
-    library.diskRevision,
-    setError,
-  );
+  const currentFolder = currentFolderId ? folders.foldersById.get(currentFolderId) : undefined;
+  const directory = currentFolder && folderKind(currentFolder) === "local" ? currentFolder.directory : undefined;
+  const { diskEntries, diskLoading } = useDiskFolder(directory, currentFolderId, library.diskRevision, setError);
   const processing = useProcessingFolders();
-  const processingRecord = currentFolder
-    ? processing.stateFor(currentFolder)
-    : undefined;
-  const { fileStates, processingLockedFor, processingStatesUnavailable } =
-    useFolderFileStates(processingRecord?.id, Boolean(processingRecord));
+  const processingRecord = currentFolder ? processing.stateFor(currentFolder) : undefined;
+  const { fileStates, processingLockedFor, processingStatesUnavailable } = useFolderFileStates(
+    processingRecord?.id,
+    Boolean(processingRecord),
+  );
   useEffect(() => {
     if (!processingStatesUnavailable) return;
     setError(
@@ -151,10 +114,7 @@ export function LibraryFilePicker({
       ),
     );
   }, [processingStatesUnavailable, t]);
-  const uploadStubs = useMemo(
-    () => Array.from(uploads.values(), (item) => item.stub),
-    [uploads],
-  );
+  const uploadStubs = useMemo(() => Array.from(uploads.values(), (item) => item.stub), [uploads]);
   const { visibleFiles, visibleFolders, availableTypes } = useLibraryFiles({
     allFiles: library.allFiles,
     stagedFiles: uploadStubs,
@@ -178,29 +138,17 @@ export function LibraryFilePicker({
     [library.fileMap, uploadStubs, selection],
   );
   const selectedFileIds = useMemo(
-    () =>
-      new Set(
-        Array.from(selection.values()).flatMap((item) =>
-          item.kind === "disk" ? [] : [item.stub.id],
-        ),
-      ),
+    () => new Set(Array.from(selection.values()).flatMap((item) => (item.kind === "disk" ? [] : [item.stub.id]))),
     [selection],
   );
   const selectedDiskPaths = useMemo(
-    () =>
-      new Set(
-        Array.from(selection.values()).flatMap((item) =>
-          item.kind === "disk" ? [item.entry.path] : [],
-        ),
-      ),
+    () => new Set(Array.from(selection.values()).flatMap((item) => (item.kind === "disk" ? [item.entry.path] : []))),
     [selection],
   );
 
   const browserEntries = useMemo<FilesPageEntry[]>(
     () => [
-      ...visibleFiles
-        .filter((stub) => uploads.has(stub.id))
-        .map<FilesPageEntry>((file) => ({ kind: "file", file })),
+      ...visibleFiles.filter((stub) => uploads.has(stub.id)).map<FilesPageEntry>((file) => ({ kind: "file", file })),
       ...libraryEntries({
         visibleFolders,
         visibleFiles: visibleFiles.filter((stub) => !uploads.has(stub.id)),
@@ -214,14 +162,11 @@ export function LibraryFilePicker({
         diskEntries: directory ? diskEntries : undefined,
       }).map((entry) => {
         const name = entry.disk?.name ?? entry.file?.name;
-        const inCurrentFolder =
-          Boolean(entry.disk) || entry.file?.folderId === currentFolderId;
+        const inCurrentFolder = Boolean(entry.disk) || entry.file?.folderId === currentFolderId;
         return {
           ...entry,
           diskState: inCurrentFolder && name ? fileStates.get(name) : undefined,
-          processingLocked: Boolean(
-            inCurrentFolder && name && processingLockedFor(name),
-          ),
+          processingLocked: Boolean(inCurrentFolder && name && processingLockedFor(name)),
         };
       }),
     ],
@@ -245,19 +190,14 @@ export function LibraryFilePicker({
 
   const entries = showSelected
     ? Array.from(selection.values()).map<FilesPageEntry>((item) =>
-        item.kind === "disk"
-          ? { kind: "diskFile", disk: item.entry }
-          : { kind: "file", file: item.stub },
+        item.kind === "disk" ? { kind: "diskFile", disk: item.entry } : { kind: "file", file: item.stub },
       )
     : browserEntries;
 
   const itemForEntry = useCallback(
     (entry: FilesPageEntry): PickerItem | null => {
       if (entry.disk) return { kind: "disk", entry: entry.disk };
-      if (entry.file)
-        return (
-          uploads.get(entry.file.id) ?? { kind: "stored", stub: entry.file }
-        );
+      if (entry.file) return uploads.get(entry.file.id) ?? { kind: "stored", stub: entry.file };
       return null;
     },
     [uploads],
@@ -280,12 +220,8 @@ export function LibraryFilePicker({
             const candidate = itemForEntry(entry);
             return candidate ? [candidate] : [];
           });
-        const from = candidates.findIndex(
-          (candidate) => pickerKey(candidate) === anchor,
-        );
-        const to = candidates.findIndex(
-          (candidate) => pickerKey(candidate) === key,
-        );
+        const from = candidates.findIndex((candidate) => pickerKey(candidate) === anchor);
+        const to = candidates.findIndex((candidate) => pickerKey(candidate) === key);
         if (from >= 0 && to >= 0)
           return addPickerItems(
             previous,
@@ -305,26 +241,16 @@ export function LibraryFilePicker({
   };
 
   const eligibilityReason = (entry: FilesPageEntry) => {
-    if (destination && entry.kind !== "folder")
-      return t("filePicker.chooseDestination", "Choose a folder, or add here.");
+    if (destination && entry.kind !== "folder") return t("filePicker.chooseDestination", "Choose a folder, or add here.");
     const item = itemForEntry(entry);
     if (!item) return undefined;
     if (entry.processingLocked)
       return entry.diskState === "processing"
-        ? t(
-            "filesPage.diskState.processingHint",
-            "Processing - available when it finishes",
-          )
-        : t(
-            "filesPage.diskState.waitingHint",
-            "Queued for processing - available when its folder has run it",
-          );
+        ? t("filesPage.diskState.processingHint", "Processing - available when it finishes")
+        : t("filesPage.diskState.waitingHint", "Queued for processing - available when its folder has run it");
     const name = item.kind === "disk" ? item.entry.name : item.stub.name;
     if (!supportsPickerFile(name, supportedFormats))
-      return t(
-        "filePicker.unsupported",
-        "This file type isn't supported by the selected tool.",
-      );
+      return t("filePicker.unsupported", "This file type isn't supported by the selected tool.");
     return undefined;
   };
 
@@ -334,12 +260,7 @@ export function LibraryFilePicker({
     const item = itemForEntry(entry);
     if (!item) return undefined;
     if (busy) return t("filePicker.adding", "Adding files…");
-    if (
-      maxSelectable !== null &&
-      maxSelectable !== 1 &&
-      selection.size >= maxSelectable &&
-      !selection.has(pickerKey(item))
-    )
+    if (maxSelectable !== null && maxSelectable !== 1 && selection.size >= maxSelectable && !selection.has(pickerKey(item)))
       return t("filePicker.limit", "Choose up to {{count}} files.", {
         count: maxSelectable,
       });
@@ -347,9 +268,7 @@ export function LibraryFilePicker({
   };
 
   const errorMessage = (cause: unknown) =>
-    cause instanceof Error
-      ? cause.message
-      : t("filePicker.error", "Could not add these files. Please try again.");
+    cause instanceof Error ? cause.message : t("filePicker.error", "Could not add these files. Please try again.");
   const reportError = (cause: unknown) => setError(errorMessage(cause));
   const getDropzoneFiles = useDropzoneFiles((cause) => {
     setDragging(false);
@@ -374,9 +293,7 @@ export function LibraryFilePicker({
 
   const stageFiles = (files: File[]) => {
     if (busyRef.current || destination) return;
-    const uploadsByKey = new Map(
-      Array.from(uploads.values(), (item) => [createQuickKey(item.file), item]),
-    );
+    const uploadsByKey = new Map(Array.from(uploads.values(), (item) => [createQuickKey(item.file), item]));
     const newItems = files.map((file) => {
       const key = createQuickKey(file);
       const existing = uploadsByKey.get(key);
@@ -392,23 +309,10 @@ export function LibraryFilePicker({
       uploadsByKey.set(key, item);
       return item;
     });
-    setUploads(
-      (previous) =>
-        new Map([
-          ...previous,
-          ...newItems.map((item) => [item.stub.id, item] as const),
-        ]),
-    );
-    setSelection((previous) =>
-      addPickerItems(previous, newItems, maxSelectable, supportedFormats),
-    );
+    setUploads((previous) => new Map([...previous, ...newItems.map((item) => [item.stub.id, item] as const)]));
+    setSelection((previous) => addPickerItems(previous, newItems, maxSelectable, supportedFormats));
     if (files.some((file) => !supportsPickerFile(file.name, supportedFormats)))
-      setError(
-        t(
-          "filePicker.unsupported",
-          "This file type isn't supported by the selected tool.",
-        ),
-      );
+      setError(t("filePicker.unsupported", "This file type isn't supported by the selected tool."));
   };
 
   const pickFromComputer = async () => {
@@ -426,14 +330,7 @@ export function LibraryFilePicker({
 
   const confirm = async (items = Array.from(selection.values())) => {
     if (busyRef.current || destination) return;
-    const eligible = Array.from(
-      addPickerItems(
-        new Map(),
-        items,
-        maxSelectable,
-        supportedFormats,
-      ).values(),
-    );
+    const eligible = Array.from(addPickerItems(new Map(), items, maxSelectable, supportedFormats).values());
     if (!eligible.length) return;
     busyRef.current = true;
     closeFilesModal();
@@ -442,8 +339,7 @@ export function LibraryFilePicker({
       const stored: StirlingFileStub[] = [];
       const incoming: File[] = [];
       for (const item of eligible) {
-        if (item.kind === "stored")
-          stored.push(library.fileMap.get(item.stub.id) ?? item.stub);
+        if (item.kind === "stored") stored.push(library.fileMap.get(item.stub.id) ?? item.stub);
         else if (item.kind === "upload") {
           incoming.push(item.file);
         } else {
@@ -453,23 +349,12 @@ export function LibraryFilePicker({
             pendingFilePathMappings.set(file, item.entry.path);
             incoming.push(file);
           } catch (cause) {
-            console.error(
-              "Could not read selected disk file",
-              item.entry.path,
-              cause,
-            );
-            errors.push(
-              t(
-                "filePicker.fileUnavailable",
-                "{{name}} is no longer available.",
-                { name: item.entry.name },
-              ),
-            );
+            console.error("Could not read selected disk file", item.entry.path, cause);
+            errors.push(t("filePicker.fileUnavailable", "{{name}} is no longer available.", { name: item.entry.name }));
           }
         }
       }
-      if (stored.length || incoming.length)
-        await onRecentFileSelect(stored, incoming);
+      if (stored.length || incoming.length) await onRecentFileSelect(stored, incoming);
     } catch (cause) {
       errors.push(errorMessage(cause));
     }
@@ -496,25 +381,13 @@ export function LibraryFilePicker({
         );
       const result = await zipFileService.extractAllFiles(file);
       if (!result.success)
-        throw new Error(
-          result.errors.join("\n") ||
-            t(
-              "filePicker.emptyZip",
-              "No files could be extracted from this ZIP.",
-            ),
-        );
+        throw new Error(result.errors.join("\n") || t("filePicker.emptyZip", "No files could be extracted from this ZIP."));
       const extracted = result.extractedFiles.map((file) => ({
         kind: "upload" as const,
         file,
         stub: createNewStirlingFileStub(file),
       }));
-      setUploads(
-        (previous) =>
-          new Map([
-            ...previous,
-            ...extracted.map((item) => [item.stub.id, item] as const),
-          ]),
-      );
+      setUploads((previous) => new Map([...previous, ...extracted.map((item) => [item.stub.id, item] as const)]));
       setSelection((previous) => {
         const next = new Map(previous);
         next.delete(pickerKey({ kind: "stored", stub }));
@@ -547,37 +420,17 @@ export function LibraryFilePicker({
   );
 
   return (
-    <div
-      ref={browserRef}
-      onScrollCapture={onScrollCapture}
-      className="files-page library-file-picker"
-      data-tour="files-modal"
-    >
+    <div ref={browserRef} onScrollCapture={onScrollCapture} className="files-page library-file-picker" data-tour="files-modal">
       <header className="library-picker-header">
         <div>
-          <h2>
-            {destination
-              ? t("filesPage.addToLibrary", "Add to Stirling library…")
-              : t("filePicker.title", "Add files")}
-          </h2>
+          <h2>{destination ? t("filesPage.addToLibrary", "Add to Stirling library…") : t("filePicker.title", "Add files")}</h2>
           <Text size="sm" c="dimmed">
             {destination
-              ? t(
-                  "filePicker.chooseDestination",
-                  "Choose a folder, or add here.",
-                )
-              : t(
-                  "filePicker.subtitle",
-                  "Choose from your library or add something new.",
-                )}
+              ? t("filePicker.chooseDestination", "Choose a folder, or add here.")
+              : t("filePicker.subtitle", "Choose from your library or add something new.")}
           </Text>
         </div>
-        <ActionIcon
-          variant="tertiary"
-          disabled={busy}
-          onClick={close}
-          aria-label={t("close", "Close")}
-        >
+        <ActionIcon variant="tertiary" disabled={busy} onClick={close} aria-label={t("close", "Close")}>
           <Icon name="x" />
         </ActionIcon>
       </header>
@@ -624,9 +477,7 @@ export function LibraryFilePicker({
             type="file"
             hidden
             multiple={maxSelectable !== 1}
-            accept={supportedFormats
-              ?.map((format) => `.${format.replace(/^\./, "")}`)
-              .join(",")}
+            accept={supportedFormats?.map((format) => `.${format.replace(/^\./, "")}`).join(",")}
             onChange={(event) => {
               stageFiles(Array.from(event.target.files ?? []));
               event.target.value = "";
@@ -658,34 +509,22 @@ export function LibraryFilePicker({
         }}
         breadcrumbs={
           currentFolderId !== null && (
-            <nav
-              className="files-page-breadcrumbs"
-              aria-label={t("filePicker.folderPath", "Folder path")}
-            >
-              {getFolderChain(currentFolderId, folders.foldersById).map(
-                (folder) => (
-                  <span className="library-picker-crumb" key={folder.id}>
-                    <Icon name="chevron-right" size={14} />
-                    <button
-                      className="files-page-breadcrumb"
-                      onClick={() => openFolder(folder.id)}
-                    >
-                      {folder.name}
-                    </button>
-                  </span>
-                ),
-              )}
+            <nav className="files-page-breadcrumbs" aria-label={t("filePicker.folderPath", "Folder path")}>
+              {getFolderChain(currentFolderId, folders.foldersById).map((folder) => (
+                <span className="library-picker-crumb" key={folder.id}>
+                  <Icon name="chevron-right" size={14} />
+                  <button className="files-page-breadcrumb" onClick={() => openFolder(folder.id)}>
+                    {folder.name}
+                  </button>
+                </span>
+              ))}
             </nav>
           )
         }
       />
       <div className="library-picker-controls">
         {destination && (
-          <Button
-            variant="tertiary"
-            leftSection={<Icon name="folder-plus" />}
-            onClick={() => setCreatingFolder(true)}
-          >
+          <Button variant="tertiary" leftSection={<Icon name="folder-plus" />} onClick={() => setCreatingFolder(true)}>
             {t("filesPage.newFolder", "New folder")}
           </Button>
         )}
@@ -724,12 +563,7 @@ export function LibraryFilePicker({
           onDragLeave={() => setDragging(false)}
           onReject={() => {
             setDragging(false);
-            setError(
-              t(
-                "filePicker.error",
-                "Could not add these files. Please try again.",
-              ),
-            );
+            setError(t("filePicker.error", "Could not add these files. Please try again."));
           }}
           styles={{ inner: { pointerEvents: "all", height: "100%" } }}
         >
@@ -741,24 +575,10 @@ export function LibraryFilePicker({
             !search &&
             !typeFilter.length &&
             originFilter === "all" ? (
-              <button
-                className="library-picker-empty"
-                onClick={() => void pickFromComputer()}
-                disabled={busy}
-              >
+              <button className="library-picker-empty" onClick={() => void pickFromComputer()} disabled={busy}>
                 <Icon name="files" size={48} />
-                <strong>
-                  {t(
-                    "filePicker.dropTitle",
-                    "Drop files here, or click to browse",
-                  )}
-                </strong>
-                <span>
-                  {t(
-                    "filePicker.dropHint",
-                    "Choose the files you want to work with.",
-                  )}
-                </span>
+                <strong>{t("filePicker.dropTitle", "Drop files here, or click to browse")}</strong>
+                <span>{t("filePicker.dropHint", "Choose the files you want to work with.")}</span>
               </button>
             ) : (
               <FileGrid
@@ -768,34 +588,20 @@ export function LibraryFilePicker({
                 activeWorkspaceFileIds={activeWorkspaceFileIds}
                 viewMode={library.viewMode}
                 currentTab={currentTab}
-                searchActive={Boolean(
-                  search || typeFilter.length || originFilter !== "all",
-                )}
+                searchActive={Boolean(search || typeFilter.length || originFilter !== "all")}
                 sortMode={sortMode}
                 onChangeSortMode={setSortMode}
                 onOpenFolder={openFolder}
                 onSelectFile={(id, shift) => {
                   const stub = fileMap.get(id);
-                  if (stub)
-                    selectItem(
-                      uploads.get(id) ?? { kind: "stored", stub },
-                      shift,
-                    );
+                  if (stub) selectItem(uploads.get(id) ?? { kind: "stored", stub }, shift);
                 }}
-                onOpenFile={(stub) =>
-                  void confirm([
-                    uploads.get(stub.id) ?? { kind: "stored", stub },
-                  ])
-                }
-                onOpenDiskFile={(entry) =>
-                  void confirm([{ kind: "disk", entry }])
-                }
+                onOpenFile={(stub) => void confirm([uploads.get(stub.id) ?? { kind: "stored", stub }])}
+                onOpenDiskFile={(entry) => void confirm([{ kind: "disk", entry }])}
                 onSetSelection={(ids) =>
                   setSelection((previous) => {
                     const next = new Map(previous);
-                    for (const [key, item] of next)
-                      if (item.kind !== "disk" && !ids.has(item.stub.id))
-                        next.delete(key);
+                    for (const [key, item] of next) if (item.kind !== "disk" && !ids.has(item.stub.id)) next.delete(key);
                     return addPickerItems(
                       next,
                       [...ids].flatMap((id) => {
@@ -820,16 +626,11 @@ export function LibraryFilePicker({
                   selectionDisabled: busy,
                   disabledReason,
                   selectedDiskPaths,
-                  onSelectDiskFile: (entry, shift) =>
-                    selectItem({ kind: "disk", entry }, shift),
+                  onSelectDiskFile: (entry, shift) => selectItem({ kind: "disk", entry }, shift),
                   onSetDiskSelection: (disks) =>
                     setSelection((previous) => {
                       const next = new Map(previous);
-                      for (const entry of entries)
-                        if (entry.disk)
-                          next.delete(
-                            pickerKey({ kind: "disk", entry: entry.disk }),
-                          );
+                      for (const entry of entries) if (entry.disk) next.delete(pickerKey({ kind: "disk", entry: entry.disk }));
                       return addPickerItems(
                         next,
                         disks.map((entry) => ({ kind: "disk", entry })),
@@ -844,12 +645,7 @@ export function LibraryFilePicker({
             {dragging && (
               <div className="files-page-drop-overlay">
                 <Icon name="file-up" size={40} />
-                <span>
-                  {t(
-                    "filePicker.dropTitle",
-                    "Drop files here, or click to browse",
-                  )}
-                </span>
+                <span>{t("filePicker.dropTitle", "Drop files here, or click to browse")}</span>
               </div>
             )}
           </div>
@@ -873,22 +669,16 @@ export function LibraryFilePicker({
               disabled={!selection.size && !showSelected}
             >
               {maxSelectable
-                ? t(
-                    "filePicker.selectedLimit",
-                    "{{count}} of {{limit}} selected",
-                    { count: selection.size, limit: maxSelectable },
-                  )
+                ? t("filePicker.selectedLimit", "{{count}} of {{limit}} selected", {
+                    count: selection.size,
+                    limit: maxSelectable,
+                  })
                 : t("filesPage.selectedCount", "{{count}} selected", {
                     count: selection.size,
                   })}
             </Button>
             {selection.size > 0 && (
-              <Button
-                size="sm"
-                variant="tertiary"
-                disabled={busy}
-                onClick={() => setSelection(new Map())}
-              >
+              <Button size="sm" variant="tertiary" disabled={busy} onClick={() => setSelection(new Map())}>
                 {t("filesPage.deselectAll", "Clear selection")}
               </Button>
             )}
@@ -918,12 +708,7 @@ export function LibraryFilePicker({
               {t("filePicker.addHere", "Add here")}
             </Button>
           ) : (
-            <Button
-              fat
-              disabled={!selection.size}
-              loading={busy}
-              onClick={() => void confirm()}
-            >
+            <Button fat disabled={!selection.size} loading={busy} onClick={() => void confirm()}>
               {t("filePicker.add", "Add {{count}} files", {
                 count: selection.size,
               })}
@@ -939,11 +724,7 @@ export function LibraryFilePicker({
           zIndex={Z_INDEX_OVER_FILE_MANAGER_MODAL}
           onClose={() => setCreatingFolder(false)}
           onSubmit={async (name) => {
-            const created = await folders.createFolder(
-              name,
-              currentFolderId,
-              "server",
-            );
+            const created = await folders.createFolder(name, currentFolderId, "server");
             openFolder(created.id);
           }}
         />
@@ -962,7 +743,6 @@ export function LibraryFilePicker({
         onClose={() => setMobileUploadOpen(false)}
         onFilesReceived={(files) => {
           stageFiles(files);
-          setMobileUploadOpen(false);
         }}
       />
     </div>

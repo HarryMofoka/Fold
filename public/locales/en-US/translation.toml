@@ -6121,6 +6121,9 @@ validating = "Validating session..."
 
 [mobileTransfer]
 deviceConnected = "Phone connected"
+doneWithCount = "Done ({{count}} received)"
+keepScanningOrDone = "Keep this window open while scanning. You can send multiple files from your phone."
+transferring = "Receiving file…"
 waitingForScan = "Waiting for phone scan"
 
 [mobileSign]
