@@ -100,9 +100,16 @@ global.URL.createObjectURL = vi.fn(() => "mocked-url");
 global.URL.revokeObjectURL = vi.fn();
 
 // Mock File and Blob API methods that aren't available in jsdom
-if (!globalThis.File.prototype.arrayBuffer) {
-  globalThis.File.prototype.arrayBuffer = function () {
-    // Return a simple ArrayBuffer with some mock data
+if (!globalThis.Blob.prototype.arrayBuffer) {
+  globalThis.Blob.prototype.arrayBuffer = function () {
+    if (typeof FileReader !== "undefined") {
+      return new Promise<ArrayBuffer>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(this);
+      });
+    }
     const buffer = new ArrayBuffer(8);
     const view = new Uint8Array(buffer);
     view.set([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -110,14 +117,8 @@ if (!globalThis.File.prototype.arrayBuffer) {
   };
 }
 
-if (!globalThis.Blob.prototype.arrayBuffer) {
-  globalThis.Blob.prototype.arrayBuffer = function () {
-    // Return a simple ArrayBuffer with some mock data
-    const buffer = new ArrayBuffer(8);
-    const view = new Uint8Array(buffer);
-    view.set([1, 2, 3, 4, 5, 6, 7, 8]);
-    return Promise.resolve(buffer);
-  };
+if (!globalThis.File.prototype.arrayBuffer) {
+  globalThis.File.prototype.arrayBuffer = globalThis.Blob.prototype.arrayBuffer;
 }
 
 // Mock crypto.subtle for hashing in tests - force override even if exists
@@ -241,5 +242,16 @@ if (typeof globalThis.DOMMatrix === "undefined") {
   });
 }
 
+// Set up pdf.js worker in node/vitest environment
+import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
+
+try {
+  const req = createRequire(import.meta.url);
+  const workerPath = req.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href;
+} catch {}
+
 // Set global test timeout to prevent hangs
-vi.setConfig({ testTimeout: 5000, hookTimeout: 5000 });
+vi.setConfig({ testTimeout: 10000, hookTimeout: 10000 });

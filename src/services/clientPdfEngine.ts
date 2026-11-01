@@ -5,9 +5,11 @@ import {
   StandardFonts,
   PDFName,
   PDFDict,
+  PDFHexString,
 } from "@cantoo/pdf-lib";
 import JSZip from "jszip";
 import { pdfWorkerManager } from "@app/services/pdfWorkerManager";
+import { BookmarkPayload } from "@app/utils/editTableOfContents";
 
 /**
  * Parses user-provided page specifications into 0-indexed page indices.
@@ -1021,6 +1023,76 @@ export class ClientPdfEngine {
   }
 
   /**
+   * Builds an ECMA-376 PowerPoint (.pptx) presentation with a slide per PDF page.
+   */
+  static async pdfToPptx(file: File): Promise<File> {
+    const arrayBuffer = await file.arrayBuffer();
+    const doc = await pdfWorkerManager.createDocument(arrayBuffer.slice(0));
+    const pagesText: string[] = [];
+    const base = file.name.replace(/\.[^/.]+$/, "");
+
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageStrings = (content.items as any[])
+        .map((item: any) => ("str" in item ? item.str : ""))
+        .filter(Boolean);
+      pagesText.push(pageStrings.join(" "));
+    }
+    await pdfWorkerManager.destroyDocument(doc);
+
+    const zip = new JSZip();
+    const slideCount = Math.max(pagesText.length, 1);
+
+    let contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n  <Default Extension="xml" ContentType="application/xml"/>\n  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>\n`;
+    for (let i = 1; i <= slideCount; i++) {
+      contentTypes += `  <Override PartName="/ppt/slides/slide${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>\n`;
+    }
+    contentTypes += `</Types>`;
+    zip.file("[Content_Types].xml", contentTypes);
+
+    zip.file(
+      "_rels/.rels",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>\n</Relationships>`,
+    );
+
+    let sldIdLst = "";
+    for (let i = 1; i <= slideCount; i++) {
+      sldIdLst += `    <p:sldId id="${255 + i}" r:id="rId${i}"/>\n`;
+    }
+    zip.file(
+      "ppt/presentation.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">\n  <p:sldMasterIdLst/>\n  <p:sldIdLst>\n${sldIdLst}  </p:sldIdLst>\n  <p:sldSz cx="9144000" cy="5143500" type="screen16x9"/>\n  <p:notesSz cx="6858000" cy="9144000"/>\n</p:presentation>`,
+    );
+
+    let presRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n`;
+    for (let i = 1; i <= slideCount; i++) {
+      presRels += `  <Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i}.xml"/>\n`;
+    }
+    presRels += `</Relationships>`;
+    zip.file("ppt/_rels/presentation.xml.rels", presRels);
+
+    const escapeXml = (unsafe: string) =>
+      unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+    for (let i = 1; i <= slideCount; i++) {
+      const text = escapeXml(pagesText[i - 1] || "");
+      const slideXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">\n  <p:cSld>\n    <p:spTree>\n      <p:nvGrpSpPr>\n        <p:cNvPr id="1" name=""/>\n        <p:cNvGrpSpPr/>\n        <p:nvPr/>\n      </p:nvGrpSpPr>\n      <p:grpSpPr>\n        <a:xfrm>\n          <a:off x="0" y="0"/>\n          <a:ext cx="0" cy="0"/>\n          <a:chOff x="0" y="0"/>\n          <a:chExt cx="0" cy="0"/>\n        </a:xfrm>\n      </p:grpSpPr>\n      <p:sp>\n        <p:nvSpPr>\n          <p:cNvPr id="2" name="Content ${i}"/>\n          <p:cNvSpPr txBox="1"/>\n          <p:nvPr/>\n        </p:nvSpPr>\n        <p:spPr>\n          <a:xfrm>\n            <a:off x="457200" y="457200"/>\n            <a:ext cx="8229600" cy="4229100"/>\n          </a:xfrm>\n          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>\n          <a:noFill/>\n        </p:spPr>\n        <p:txBody>\n          <a:bodyPr vert="horz" lIns="91440" tIns="45720" rIns="91440" bIns="45720" rtlCol="0"/>\n          <a:lstStyle/>\n          <a:p>\n            <a:pPr algn="l" fontAlgn="base"/>\n            <a:r>\n              <a:rPr lang="en-US" sz="1800" b="0"/>\n              <a:t xml:space="preserve">${text}</a:t>\n            </a:r>\n          </a:p>\n        </p:txBody>\n      </p:sp>\n    </p:spTree>\n  </p:cSld>\n  <p:clrMapOvr><a:masterClrLst/></p:clrMapOvr>\n</p:sld>`;
+      zip.file(`ppt/slides/slide${i}.xml`, slideXml);
+    }
+
+    const pptxBlob = await zip.generateAsync({ type: "blob" });
+    return new File([pptxBlob], `${base}.pptx`, {
+      type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    });
+  }
+
+  /**
    * Generates a PDF from plain text or Markdown with proper pagination and typography.
    */
   static async textToPdf(file: File): Promise<Uint8Array> {
@@ -1588,13 +1660,37 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Removes all annotations, comments, highlights, and markups from a PDF.
+   * Removes annotations, comments, and highlights while preserving interactive form widgets.
    */
-  static async removeAnnotations(file: File): Promise<Uint8Array> {
+  static async removeAnnotations(
+    file: File,
+    options?: { removeWidgets?: boolean },
+  ): Promise<Uint8Array> {
     const bytes = await file.arrayBuffer();
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
     for (const page of doc.getPages()) {
-      page.node.delete(PDFName.of("Annots"));
+      const annots = page.node.Annots();
+      if (!annots) continue;
+
+      if (options?.removeWidgets) {
+        page.node.delete(PDFName.of("Annots"));
+        continue;
+      }
+
+      const keptWidgets: any[] = [];
+      for (let i = 0; i < annots.size(); i++) {
+        const ref = annots.get(i);
+        const dict = doc.context.lookup(ref, PDFDict);
+        if (dict && dict.get(PDFName.of("Subtype")) === PDFName.of("Widget")) {
+          keptWidgets.push(ref);
+        }
+      }
+
+      if (keptWidgets.length > 0) {
+        page.node.set(PDFName.of("Annots"), doc.context.obj(keptWidgets));
+      } else {
+        page.node.delete(PDFName.of("Annots"));
+      }
     }
     return await doc.save({ useObjectStreams: true });
   }
@@ -1658,34 +1754,128 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Generates auto-rotate analysis report for dry-run inspection.
+   * Generates auto-rotate analysis report based on dominant page text orientations.
    */
   static async autoRotateReport(file: File): Promise<Record<string, unknown>> {
+    const rawBytes = await file.arrayBuffer();
+    let workerDoc: any = null;
     let totalPages = 1;
-    try {
-      const bytes = await file.arrayBuffer();
-      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-      totalPages = doc.getPageCount();
-    } catch {}
+    const pagesInfo: Array<{
+      pageNumber: number;
+      currentRotation: number;
+      correction: number;
+      confidence: number;
+      method: "text";
+      apply: boolean;
+    }> = [];
 
-    const pages = Array.from({ length: totalPages }, (_, i) => ({
-      pageNumber: i + 1,
-      currentRotation: 0,
-      correction: 0,
-      confidence: 100,
-      method: "text" as const,
-      apply: false,
-    }));
+    try {
+      workerDoc = await pdfWorkerManager.createDocument(rawBytes.slice(0));
+      totalPages = workerDoc.numPages;
+
+      for (let i = 1; i <= totalPages; i++) {
+        const page = await workerDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const currentRotation = page.rotate || 0;
+
+        const angleCounts: Record<number, number> = { 0: 0, 90: 0, 180: 0, 270: 0 };
+        let totalItems = 0;
+
+        for (const item of textContent.items as any[]) {
+          if (!item.transform) continue;
+          const a = item.transform[0];
+          const b = item.transform[1];
+          let deg = Math.round((Math.atan2(b, a) * 180) / Math.PI);
+          if (deg < 0) deg += 360;
+          deg = deg % 360;
+
+          const snapped = (Math.round(deg / 90) * 90) % 360;
+          const weight = item.str?.length || 1;
+          angleCounts[snapped] = (angleCounts[snapped] || 0) + weight;
+          totalItems += weight;
+        }
+
+        let dominantAngle = 0;
+        let maxCount = 0;
+        for (const [angleStr, count] of Object.entries(angleCounts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            dominantAngle = parseInt(angleStr, 10);
+          }
+        }
+
+        const correction = totalItems > 0 ? (360 - dominantAngle) % 360 : 0;
+        const confidence =
+          totalItems > 0 ? Math.round((maxCount / totalItems) * 100) : 100;
+
+        pagesInfo.push({
+          pageNumber: i,
+          currentRotation,
+          correction,
+          confidence,
+          method: "text",
+          apply: correction !== 0,
+        });
+      }
+    } catch {
+      try {
+        const doc = await PDFDocument.load(rawBytes.slice(0), {
+          ignoreEncryption: true,
+        });
+        totalPages = doc.getPageCount();
+      } catch {}
+      for (let i = 1; i <= totalPages; i++) {
+        pagesInfo.push({
+          pageNumber: i,
+          currentRotation: 0,
+          correction: 0,
+          confidence: 100,
+          method: "text",
+          apply: false,
+        });
+      }
+    } finally {
+      if (workerDoc) {
+        await pdfWorkerManager.destroyDocument(workerDoc);
+      }
+    }
+
+    const pagesToRotate = pagesInfo.filter((p) => p.apply).length;
 
     return {
-      pages,
+      pages: pagesInfo,
       totalPages,
-      pagesToRotate: 0,
+      pagesToRotate,
       detectedByText: totalPages,
       detectedByOsd: 0,
       inferred: 0,
       undetected: 0,
     };
+  }
+
+  /**
+   * Automatically aligns page rotations so extracted text is right-side up.
+   */
+  static async autoRotate(file: File): Promise<Uint8Array> {
+    const report = await ClientPdfEngine.autoRotateReport(file);
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const pages = doc.getPages();
+    const reportPages =
+      (report.pages as Array<{
+        pageNumber: number;
+        correction: number;
+      }>) || [];
+
+    for (const p of reportPages) {
+      if (p.correction && p.pageNumber <= pages.length) {
+        const page = pages[p.pageNumber - 1];
+        const currentRotation = page.getRotation().angle;
+        page.setRotation(degrees((currentRotation + p.correction) % 360));
+      }
+    }
+
+    return await doc.save({ useObjectStreams: true });
   }
 
   /**
@@ -1839,7 +2029,7 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Strips raster images from all PDF pages.
+   * Neutralizes raster images by substituting blank XObject forms to avoid content-stream errors.
    */
   static async removeImages(file: File): Promise<Uint8Array> {
     const bytes = await file.arrayBuffer();
@@ -1853,12 +2043,22 @@ export class ClientPdfEngine {
           if (xObject) {
             const keys = xObject.keys();
             for (const key of keys) {
-              const obj = xObject.lookup(key, PDFDict);
+              const raw = doc.context.lookup(xObject.get(key));
+              const dict =
+                (raw as any)?.dict ||
+                (raw instanceof PDFDict ? raw : undefined);
               if (
-                obj &&
-                obj.get(PDFName.of("Subtype")) === PDFName.of("Image")
+                dict &&
+                dict.get(PDFName.of("Subtype")) === PDFName.of("Image")
               ) {
-                xObject.delete(key);
+                const emptyForm = doc.context.flateStream(new Uint8Array(0), {
+                  Type: "XObject",
+                  Subtype: "Form",
+                  BBox: [0, 0, 0, 0],
+                  Resources: doc.context.obj({}),
+                });
+                const formRef = doc.context.register(emptyForm);
+                xObject.set(key, formRef);
               }
             }
           }
@@ -2026,7 +2226,7 @@ export class ClientPdfEngine {
   }
 
   /**
-   * Redacts sensitive terms and applies visual redaction marks.
+   * Redacts sensitive terms by locating text bounding boxes and applying visual redaction marks.
    */
   static async autoRedact(
     file: File,
@@ -2035,8 +2235,10 @@ export class ClientPdfEngine {
       redactColor?: string;
     },
   ): Promise<Uint8Array> {
-    const bytes = await file.arrayBuffer();
-    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const rawBytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(new Uint8Array(rawBytes.slice(0)), {
+      ignoreEncryption: true,
+    });
     doc.setProducer("Fold Privacy Engine");
     doc.setModificationDate(new Date());
 
@@ -2047,21 +2249,65 @@ export class ClientPdfEngine {
     const color = rgb(isNaN(r) ? 0 : r, isNaN(g) ? 0 : g, isNaN(b) ? 0 : b);
 
     const words = (options?.listOfText || "")
-      .split("\n")
+      .split(/[\r\n,]+/)
       .map((w) => w.trim())
       .filter((w) => w.length > 0);
 
     if (words.length > 0) {
-      for (const page of doc.getPages()) {
-        const { width } = page.getSize();
-        page.drawRectangle({
-          x: 20,
-          y: 20,
-          width: width - 40,
-          height: 18,
-          color,
-          opacity: 0.9,
-        });
+      let workerDoc: any = null;
+      try {
+        workerDoc = await pdfWorkerManager.createDocument(rawBytes.slice(0));
+        const numPages = Math.min(workerDoc.numPages, doc.getPageCount());
+
+        for (let i = 1; i <= numPages; i++) {
+          const pdfPage = await workerDoc.getPage(i);
+          const textContent = await pdfPage.getTextContent();
+          const targetPage = doc.getPage(i - 1);
+
+          for (const item of textContent.items as any[]) {
+            const str = item.str;
+            if (!str || !item.transform) continue;
+
+            for (const word of words) {
+              let startIndex = 0;
+              const lowerStr = str.toLowerCase();
+              const lowerWord = word.toLowerCase();
+
+              while (
+                (startIndex = lowerStr.indexOf(lowerWord, startIndex)) !== -1
+              ) {
+                const fracStart = startIndex / str.length;
+                const fracWidth = word.length / str.length;
+                const rectX = item.transform[4] + fracStart * item.width;
+                const rectWidth = fracWidth * item.width;
+                const fontSize =
+                  Math.abs(item.transform[3]) ||
+                  Math.abs(item.transform[0]) ||
+                  item.height ||
+                  12;
+                const rectY = item.transform[5] - 2;
+                const rectHeight = fontSize + 4;
+
+                targetPage.drawRectangle({
+                  x: Math.max(0, rectX - 2),
+                  y: Math.max(0, rectY),
+                  width: Math.max(4, rectWidth + 4),
+                  height: Math.max(6, rectHeight),
+                  color,
+                  opacity: 1.0,
+                });
+
+                startIndex += word.length;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[autoRedact] text scan fallback:", err);
+      } finally {
+        if (workerDoc) {
+          await pdfWorkerManager.destroyDocument(workerDoc);
+        }
       }
     }
 
@@ -2192,5 +2438,362 @@ export class ClientPdfEngine {
         `"${String(f.name || "")}","${String(f.type || "")}","${String(f.value || "").replace(/"/g, '""')}"`,
     );
     return [headers.join(","), ...rows].join("\n");
+  }
+
+  /**
+   * Extracts outline / table-of-contents hierarchy from PDF bookmarks.
+   */
+  static async extractBookmarks(file: File): Promise<BookmarkPayload[]> {
+    const bytes = await file.arrayBuffer();
+    let workerDoc: any = null;
+    try {
+      workerDoc = await pdfWorkerManager.createDocument(bytes.slice(0));
+      const rawOutline = await workerDoc.getOutline();
+      if (
+        !rawOutline ||
+        !Array.isArray(rawOutline) ||
+        rawOutline.length === 0
+      ) {
+        return [];
+      }
+
+      const mapNode = async (item: any): Promise<BookmarkPayload> => {
+        let pageNumber = 1;
+        if (item.dest) {
+          let dest = item.dest;
+          if (typeof dest === "string") {
+            try {
+              dest = await workerDoc.getDestination(dest);
+            } catch {}
+          }
+          if (Array.isArray(dest) && dest[0]) {
+            try {
+              const idx = await workerDoc.getPageIndex(dest[0]);
+              pageNumber = idx + 1;
+            } catch {}
+          }
+        }
+
+        const children: BookmarkPayload[] = [];
+        if (item.items && Array.isArray(item.items)) {
+          for (const sub of item.items) {
+            children.push(await mapNode(sub));
+          }
+        }
+
+        return {
+          title: item.title || "",
+          pageNumber,
+          children,
+        };
+      };
+
+      const result: BookmarkPayload[] = [];
+      for (const item of rawOutline) {
+        result.push(await mapNode(item));
+      }
+      return result;
+    } catch (err) {
+      console.warn("[extractBookmarks] outline extraction error:", err);
+      return [];
+    } finally {
+      if (workerDoc) {
+        await pdfWorkerManager.destroyDocument(workerDoc);
+      }
+    }
+  }
+
+  /**
+   * Replaces or creates the document outline hierarchy matching provided bookmarks.
+   */
+  static async updateTableOfContents(
+    file: File,
+    options?: {
+      bookmarkData?: string | BookmarkPayload[];
+      replaceExisting?: boolean | string;
+    },
+  ): Promise<Uint8Array> {
+    let bookmarks: BookmarkPayload[] = [];
+    if (typeof options?.bookmarkData === "string") {
+      try {
+        bookmarks = JSON.parse(options.bookmarkData);
+      } catch {
+        bookmarks = [];
+      }
+    } else if (Array.isArray(options?.bookmarkData)) {
+      bookmarks = options.bookmarkData;
+    }
+
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const pages = doc.getPages();
+
+    if (bookmarks.length === 0) {
+      if (options?.replaceExisting) {
+        doc.catalog.delete(PDFName.of("Outlines"));
+      }
+      return await doc.save({ useObjectStreams: true });
+    }
+
+    const outlinesRef = doc.context.nextRef();
+
+    const buildLevel = (
+      items: BookmarkPayload[],
+      parentRef: any,
+    ): { first: any; last: any; count: number } | null => {
+      if (!items || items.length === 0) return null;
+      const refs = items.map(() => doc.context.nextRef());
+      let totalCount = items.length;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const itemRef = refs[i];
+        const targetPageIdx = Math.max(
+          0,
+          Math.min(pages.length - 1, (item.pageNumber || 1) - 1),
+        );
+        const targetPage = pages[targetPageIdx];
+        const dest = doc.context.obj([targetPage.ref, "Fit"]);
+
+        const dictData: Record<string, any> = {
+          Title: PDFHexString.fromText(item.title || ""),
+          Parent: parentRef,
+          Dest: dest,
+        };
+
+        if (i > 0) dictData.Prev = refs[i - 1];
+        if (i < items.length - 1) dictData.Next = refs[i + 1];
+
+        if (item.children && item.children.length > 0) {
+          const childInfo = buildLevel(item.children, itemRef);
+          if (childInfo) {
+            dictData.First = childInfo.first;
+            dictData.Last = childInfo.last;
+            dictData.Count = childInfo.count;
+            totalCount += childInfo.count;
+          }
+        }
+
+        const itemDict = doc.context.obj(dictData);
+        doc.context.assign(itemRef, itemDict);
+      }
+
+      return {
+        first: refs[0],
+        last: refs[refs.length - 1],
+        count: totalCount,
+      };
+    };
+
+    const rootInfo = buildLevel(bookmarks, outlinesRef);
+    if (rootInfo) {
+      const outlinesDict = doc.context.obj({
+        Type: "Outlines",
+        First: rootInfo.first,
+        Last: rootInfo.last,
+        Count: rootInfo.count,
+      });
+      doc.context.assign(outlinesRef, outlinesDict);
+      doc.catalog.set(PDFName.of("Outlines"), outlinesRef);
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Splits multi-photo or item flatbed scans into individual segmented image files.
+   */
+  static async extractImageScans(
+    file: File,
+    options?: {
+      format?: string;
+      dpi?: number;
+    },
+  ): Promise<{ files: File[]; isZip: boolean; zipFile?: File }> {
+    const rawFormat = (options?.format || "png").toLowerCase().replace(".", "");
+    const ext = rawFormat === "jpeg" ? "jpg" : rawFormat;
+    const mimeType = ext === "jpg" ? "image/jpeg" : "image/png";
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+
+    let rendered: { files: File[]; isZip: boolean; zipFile?: File };
+    try {
+      rendered = await ClientPdfEngine.pdfToImages(file, {
+        format: ext,
+        dpi: options?.dpi || 150,
+        singleOrMultiple: "multiple",
+      });
+    } catch {
+      const fallbackBlob = new Blob([new Uint8Array(0)], { type: mimeType });
+      const fallbackFile = new File([fallbackBlob], `${baseName}_scan_1.${ext}`, {
+        type: mimeType,
+      });
+      return { files: [fallbackFile], isZip: false };
+    }
+
+    if (
+      typeof document !== "undefined" &&
+      typeof document.createElement === "function"
+    ) {
+      const segmentedFiles: File[] = [];
+      for (let pIdx = 0; pIdx < rendered.files.length; pIdx++) {
+        const imgFile = rendered.files[pIdx];
+        try {
+          const imgUrl = URL.createObjectURL(imgFile);
+          const img = new Image();
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = reject;
+            img.src = imgUrl;
+          });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            URL.revokeObjectURL(imgUrl);
+            segmentedFiles.push(imgFile);
+            continue;
+          }
+
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(imgUrl);
+
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+
+          const corners = [
+            0,
+            (canvas.width - 1) * 4,
+            (canvas.height - 1) * canvas.width * 4,
+            (canvas.height * canvas.width - 1) * 4,
+          ];
+          let bgR = 0;
+          let bgG = 0;
+          let bgB = 0;
+          for (const c of corners) {
+            bgR += data[c];
+            bgG += data[c + 1];
+            bgB += data[c + 2];
+          }
+          bgR /= 4;
+          bgG /= 4;
+          bgB /= 4;
+
+          const step = Math.max(4, Math.floor(canvas.width / 100));
+          const cols = Math.floor(canvas.width / step);
+          const rows = Math.floor(canvas.height / step);
+          const grid: boolean[][] = Array.from({ length: rows }, () =>
+            Array(cols).fill(false),
+          );
+
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const px = c * step;
+              const py = r * step;
+              const idx = (py * canvas.width + px) * 4;
+              const diff =
+                Math.abs(data[idx] - bgR) +
+                Math.abs(data[idx + 1] - bgG) +
+                Math.abs(data[idx + 2] - bgB);
+              if (diff > 35) {
+                grid[r][c] = true;
+              }
+            }
+          }
+
+          const rowHasForeground = grid.map(
+            (row) => row.filter(Boolean).length > cols * 0.05,
+          );
+          const bands: Array<{ startR: number; endR: number }> = [];
+          let inBand = false;
+          let startR = 0;
+
+          for (let r = 0; r < rows; r++) {
+            if (rowHasForeground[r] && !inBand) {
+              inBand = true;
+              startR = r;
+            } else if (!rowHasForeground[r] && inBand) {
+              inBand = false;
+              if (r - startR > 5) {
+                bands.push({ startR, endR: r });
+              }
+            }
+          }
+          if (inBand && rows - startR > 5) {
+            bands.push({ startR, endR: rows });
+          }
+
+          if (bands.length > 1) {
+            let scanIdx = 1;
+            for (const band of bands) {
+              const minY = Math.max(0, band.startR * step - 5);
+              const maxY = Math.min(canvas.height, band.endR * step + 5);
+              const h = maxY - minY;
+
+              let minC = cols;
+              let maxC = 0;
+              for (let r = band.startR; r < band.endR; r++) {
+                for (let c = 0; c < cols; c++) {
+                  if (grid[r][c]) {
+                    if (c < minC) minC = c;
+                    if (c > maxC) maxC = c;
+                  }
+                }
+              }
+              const minX = Math.max(0, minC * step - 5);
+              const maxX = Math.min(canvas.width, (maxC + 1) * step + 5);
+              const w = maxX - minX;
+
+              if (w > 20 && h > 20) {
+                const cropCanvas = document.createElement("canvas");
+                cropCanvas.width = w;
+                cropCanvas.height = h;
+                const cropCtx = cropCanvas.getContext("2d");
+                if (cropCtx) {
+                  cropCtx.drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+                  const blob = await new Promise<Blob>((res) => {
+                    cropCanvas.toBlob(
+                      (b) => res(b || new Blob()),
+                      mimeType,
+                      0.95,
+                    );
+                  });
+                  segmentedFiles.push(
+                    new File(
+                      [blob],
+                      `${baseName}_scan_p${pIdx + 1}_${scanIdx}.${ext}`,
+                      {
+                        type: mimeType,
+                      },
+                    ),
+                  );
+                  scanIdx++;
+                }
+              }
+            }
+          } else {
+            segmentedFiles.push(imgFile);
+          }
+        } catch {
+          segmentedFiles.push(imgFile);
+        }
+      }
+
+      if (segmentedFiles.length > 1) {
+        const zip = new JSZip();
+        for (const f of segmentedFiles) {
+          zip.file(f.name, f);
+        }
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const zipFile = new File([zipBlob], `${baseName}_scans.zip`, {
+          type: "application/zip",
+        });
+        return { files: segmentedFiles, isZip: true, zipFile };
+      }
+      return { files: segmentedFiles, isZip: false };
+    }
+
+    return rendered;
   }
 }

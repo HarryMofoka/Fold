@@ -43,10 +43,12 @@ class PDFWorkerManager {
    */
   private initializeWorker(): void {
     if (!this.isInitialized) {
-      GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
+      if (!GlobalWorkerOptions.workerSrc) {
+        GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+          import.meta.url,
+        ).toString();
+      }
       (GlobalWorkerOptions as { docBaseUrl?: string }).docBaseUrl = undefined;
       this.isInitialized = true;
     }

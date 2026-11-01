@@ -375,9 +375,7 @@ export async function handleClientApiRequest(
         const report = await ClientPdfEngine.autoRotateReport(primaryFile);
         return makeResponse(config, report, "report.json", "application/json");
       }
-      const rotatedBytes = await ClientPdfEngine.rotatePdf(primaryFile, {
-        angle: 90,
-      });
+      const rotatedBytes = await ClientPdfEngine.autoRotate(primaryFile);
       return makeResponse(config, rotatedBytes, `rotated_${primaryFile.name}`);
     }
 
@@ -765,10 +763,7 @@ export async function handleClientApiRequest(
     }
 
     // Convert PDF to Word
-    if (
-      url.includes("/convert/pdf/word") ||
-      url.includes("/convert/pdf/presentation")
-    ) {
+    if (url.includes("/convert/pdf/word")) {
       if (!primaryFile) throw new Error("No PDF file provided for conversion.");
       const docxFile = await ClientPdfEngine.pdfToDocx(primaryFile);
       const buffer = await docxFile.arrayBuffer();
@@ -777,6 +772,19 @@ export async function handleClientApiRequest(
         new Uint8Array(buffer),
         docxFile.name,
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
+    }
+
+    // Convert PDF to Presentation (PPTX)
+    if (url.includes("/convert/pdf/presentation")) {
+      if (!primaryFile) throw new Error("No PDF file provided for conversion.");
+      const pptxFile = await ClientPdfEngine.pdfToPptx(primaryFile);
+      const buffer = await pptxFile.arrayBuffer();
+      return makeResponse(
+        config,
+        new Uint8Array(buffer),
+        pptxFile.name,
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       );
     }
 
@@ -965,8 +973,8 @@ export async function handleClientApiRequest(
     if (url.includes("/misc/extract-image-scans")) {
       if (!primaryFile)
         throw new Error("No PDF file provided for scan extraction.");
-      const result = await ClientPdfEngine.pdfToImages(primaryFile, {
-        format: "png",
+      const result = await ClientPdfEngine.extractImageScans(primaryFile, {
+        format: (params.format as string) || "png",
       });
       const output = result.zipFile || result.files[0];
       const buffer = await output.arrayBuffer();
@@ -978,13 +986,29 @@ export async function handleClientApiRequest(
       );
     }
 
+    // Extract Bookmarks
+    if (url.includes("/general/extract-bookmarks")) {
+      if (!primaryFile)
+        throw new Error("No PDF file provided for bookmark extraction.");
+      const bookmarks = await ClientPdfEngine.extractBookmarks(primaryFile);
+      return makeResponse(
+        config,
+        bookmarks,
+        "bookmarks.json",
+        "application/json",
+      );
+    }
+
     // Edit Table of Contents
     if (url.includes("/general/edit-table-of-contents")) {
       if (!primaryFile) throw new Error("No PDF file provided for TOC update.");
-      const buffer = await primaryFile.arrayBuffer();
+      const updatedBytes = await ClientPdfEngine.updateTableOfContents(
+        primaryFile,
+        params,
+      );
       return makeResponse(
         config,
-        new Uint8Array(buffer),
+        updatedBytes,
         `toc_${primaryFile.name}`,
       );
     }
@@ -1016,6 +1040,12 @@ export async function handleClientApiRequest(
     // Auto Form Detection
     if (url.includes("/form/form-detection/detect")) {
       if (!primaryFile) throw new Error("No file provided for form detection.");
+      const fields = await ClientPdfEngine.getFormFields(primaryFile);
+      const counts = {
+        textFields: fields.filter((f) => f.type === "text").length,
+        checkBoxes: fields.filter((f) => f.type === "checkbox").length,
+        radioButtons: fields.filter((f) => f.type === "radio").length,
+      };
       const buffer = await primaryFile.arrayBuffer();
       return makeResponse(
         config,
@@ -1024,11 +1054,7 @@ export async function handleClientApiRequest(
         "application/pdf",
         200,
         {
-          "x-stirling-detected-fields": JSON.stringify({
-            textFields: 1,
-            checkBoxes: 0,
-            radioButtons: 0,
-          }),
+          "x-stirling-detected-fields": JSON.stringify(counts),
         },
       );
     }
