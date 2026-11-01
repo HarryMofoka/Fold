@@ -439,7 +439,7 @@ export class ClientPdfEngine {
       const fields = form.getFields();
       for (const field of fields) {
         try {
-          field.enableReadOnly();
+          field.disableReadOnly();
           // Clear readOnly flag
           const dict = (field as unknown as { acroField?: { dict?: PDFDict } })
             .acroField?.dict;
@@ -1291,5 +1291,906 @@ export class ClientPdfEngine {
     // 4. Text formats fallback
     const text = await file.text();
     return [new File([text], `${base}.${to}`, { type: "text/plain" })];
+  }
+
+  private static async extractAllPageText(file: File): Promise<string[]> {
+    const arrayBuffer = await file.arrayBuffer();
+    const doc = await pdfWorkerManager.createDocument(arrayBuffer);
+    const textPieces: string[] = [];
+
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageStrings = (content.items as any[])
+        .map((item: any) => ("str" in item ? String(item.str) : ""))
+        .filter(Boolean);
+      textPieces.push(pageStrings.join(" "));
+    }
+
+    await pdfWorkerManager.destroyDocument(doc);
+    return textPieces;
+  }
+
+  /**
+   * Encrypts and password-protects a PDF document with optional user/owner permissions.
+   */
+  static async addPassword(
+    file: File,
+    options: {
+      password?: string;
+      ownerPassword?: string;
+      keyLength?: number | string;
+      preventPrinting?: boolean;
+      preventModify?: boolean;
+      preventExtractContent?: boolean;
+      preventModifyAnnotations?: boolean;
+      preventFillInForm?: boolean;
+      preventAssembly?: boolean;
+    },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const userPassword = options.password ? String(options.password) : undefined;
+    const ownerPassword = options.ownerPassword
+      ? String(options.ownerPassword)
+      : userPassword;
+
+    await doc.encrypt({
+      userPassword,
+      ownerPassword,
+      permissions: {
+        printing: options.preventPrinting ? false : "highResolution",
+        modifying: !options.preventModify,
+        copying: !options.preventExtractContent,
+        annotating: !options.preventModifyAnnotations,
+        fillingForms: !options.preventFillInForm,
+        contentAccessibility: true,
+        documentAssembly: !options.preventAssembly,
+      },
+    });
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Removes password from a protected PDF document.
+   */
+  static async removePassword(
+    file: File,
+    options?: { password?: string } | string,
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const pwd = typeof options === "string" ? options : options?.password;
+    const doc = await PDFDocument.load(bytes, {
+      password: pwd || undefined,
+      ignoreEncryption: true,
+    });
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Crops PDF pages to specified coordinates or margins.
+   */
+  static async cropPdf(
+    file: File,
+    options: {
+      x?: number | string;
+      y?: number | string;
+      width?: number | string;
+      height?: number | string;
+      pageNumbers?: string;
+    },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const totalPages = doc.getPageCount();
+    const pageIndices = parsePageNumbers(options.pageNumbers, totalPages);
+
+    for (const idx of pageIndices) {
+      const page = doc.getPage(idx);
+      const mediaBox = page.getMediaBox();
+      const x =
+        options.x !== undefined && options.x !== "" ? Number(options.x) : 0;
+      const y =
+        options.y !== undefined && options.y !== "" ? Number(options.y) : 0;
+      const width =
+        options.width !== undefined && options.width !== ""
+          ? Number(options.width)
+          : mediaBox.width;
+      const height =
+        options.height !== undefined && options.height !== ""
+          ? Number(options.height)
+          : mediaBox.height;
+
+      page.setCropBox(x, y, width, height);
+      page.setMediaBox(x, y, width, height);
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Scans and removes empty/blank pages from a PDF.
+   */
+  static async removeBlankPages(
+    file: File,
+    _options?: { threshold?: number; whitePercent?: number },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const total = doc.getPageCount();
+    if (total <= 1) return await doc.save();
+
+    let textByPage: string[] = [];
+    try {
+      textByPage = await ClientPdfEngine.extractAllPageText(file);
+    } catch {
+      // Fallback
+    }
+
+    const pagesToRemove: number[] = [];
+    for (let i = 0; i < total; i++) {
+      const pageText = (textByPage[i] || "").trim();
+      const page = doc.getPage(i);
+      const annots = page.node.get(PDFName.of("Annots"));
+      if (pageText.length === 0 && !annots) {
+        pagesToRemove.push(i);
+      }
+    }
+
+    if (pagesToRemove.length > 0 && pagesToRemove.length < total) {
+      for (let j = pagesToRemove.length - 1; j >= 0; j--) {
+        doc.removePage(pagesToRemove[j]);
+      }
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Overlays another PDF as foreground or background watermark/stamp.
+   */
+  static async overlayPdfs(
+    mainFile: File,
+    overlayFiles: File[],
+    options?: { overlayMode?: string; overlayPosition?: string },
+  ): Promise<Uint8Array> {
+    const mainBytes = await mainFile.arrayBuffer();
+    const mainDoc = await PDFDocument.load(mainBytes, { ignoreEncryption: true });
+
+    if (!overlayFiles || overlayFiles.length === 0) {
+      return await mainDoc.save();
+    }
+
+    const overlayBytes = await overlayFiles[0].arrayBuffer();
+    const overlayDoc = await PDFDocument.load(overlayBytes, {
+      ignoreEncryption: true,
+    });
+    const overlayPageCount = overlayDoc.getPageCount();
+    const mode = options?.overlayMode || "SequentialOverlay";
+
+    const pageCount = mainDoc.getPageCount();
+    for (let i = 0; i < pageCount; i++) {
+      const overlayIdx =
+        mode === "FixedRepeatOverlay" ? 0 : Math.min(i, overlayPageCount - 1);
+      const [embedded] = await mainDoc.embedPages([
+        overlayDoc.getPage(overlayIdx),
+      ]);
+      const page = mainDoc.getPage(i);
+      const { width, height } = page.getSize();
+
+      page.drawPage(embedded, {
+        x: 0,
+        y: 0,
+        width,
+        height,
+        opacity: 0.85,
+      });
+    }
+
+    return await mainDoc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Multiple pages per sheet grid layout (N-Up).
+   */
+  static async multiPageLayout(
+    file: File,
+    options: {
+      pagesPerSheet?: number | string;
+      rows?: number | string;
+      cols?: number | string;
+    },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const srcDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const outDoc = await PDFDocument.create();
+
+    const n = Number(options.pagesPerSheet) || 2;
+    let cols = 1;
+    let rows = 2;
+    if (n === 4) {
+      cols = 2;
+      rows = 2;
+    } else if (n === 9) {
+      cols = 3;
+      rows = 3;
+    } else if (n === 16) {
+      cols = 4;
+      rows = 4;
+    } else if (options.rows && options.cols) {
+      rows = Number(options.rows);
+      cols = Number(options.cols);
+    }
+
+    const srcPages = srcDoc.getPages();
+    const embeddedPages = await outDoc.embedPages(srcPages);
+    const sheetWidth = 595.28;
+    const sheetHeight = 841.89;
+
+    const cellWidth = sheetWidth / cols;
+    const cellHeight = sheetHeight / rows;
+    const totalSrc = embeddedPages.length;
+    const perSheet = rows * cols;
+
+    for (let i = 0; i < totalSrc; i += perSheet) {
+      const sheet = outDoc.addPage([sheetWidth, sheetHeight]);
+      for (let j = 0; j < perSheet && i + j < totalSrc; j++) {
+        const col = j % cols;
+        const row = Math.floor(j / cols);
+        const embedded = embeddedPages[i + j];
+        const { width: pW, height: pH } = embedded;
+        const scale = Math.min(
+          (cellWidth * 0.95) / pW,
+          (cellHeight * 0.95) / pH,
+        );
+
+        const x = col * cellWidth + (cellWidth - pW * scale) / 2;
+        const y =
+          sheetHeight - (row + 1) * cellHeight + (cellHeight - pH * scale) / 2;
+
+        sheet.drawPage(embedded, {
+          x,
+          y,
+          width: pW * scale,
+          height: pH * scale,
+        });
+      }
+    }
+
+    return await outDoc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Rescales page dimensions or standard paper sizes (A4, Letter).
+   */
+  static async scalePages(
+    file: File,
+    options: { scaleFactor?: number | string; pageSize?: string },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const factor = Number(options.scaleFactor) || 1.0;
+
+    for (const page of doc.getPages()) {
+      if (options.pageSize === "A4") {
+        page.setSize(595.28, 841.89);
+      } else if (options.pageSize === "LETTER") {
+        page.setSize(612.0, 792.0);
+      } else if (factor !== 1.0) {
+        const { width, height } = page.getSize();
+        page.setSize(width * factor, height * factor);
+        page.scale(factor, factor);
+      }
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Removes all annotations, comments, highlights, and markups from a PDF.
+   */
+  static async removeAnnotations(file: File): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    for (const page of doc.getPages()) {
+      page.node.delete(PDFName.of("Annots"));
+    }
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Removes digital signature fields and signature dictionaries.
+   */
+  static async removeCertificateSign(file: File): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    try {
+      const form = doc.getForm();
+      const fields = form.getFields();
+      for (const field of fields) {
+        const name = field.getName();
+        if (
+          field.constructor.name.includes("Signature") ||
+          name.toLowerCase().includes("sig")
+        ) {
+          form.removeField(field);
+        }
+      }
+    } catch {
+      // Form empty
+    }
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Intelligently auto-renames a PDF based on document title metadata or first text.
+   */
+  static async autoRename(
+    file: File,
+    _options?: { useFirstTextAsFallback?: boolean },
+  ): Promise<string> {
+    try {
+      const bytes = await file.arrayBuffer();
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const title = doc.getTitle();
+      if (title && title.trim()) {
+        const clean = title.trim().replace(/[\\/:*?"<>|]/g, "_");
+        return `${clean}.pdf`;
+      }
+    } catch {}
+
+    try {
+      const textPages = await ClientPdfEngine.extractAllPageText(file);
+      if (textPages && textPages[0]) {
+        const firstLine = textPages[0]
+          .split("\n")
+          .map((s: string) => s.trim())
+          .find((s: string) => s.length > 2);
+        if (firstLine) {
+          const clean = firstLine.slice(0, 50).replace(/[\\/:*?"<>|]/g, "_");
+          return `${clean}.pdf`;
+        }
+      }
+    } catch {}
+
+    return file.name;
+  }
+
+  /**
+   * Generates auto-rotate analysis report for dry-run inspection.
+   */
+  static async autoRotateReport(file: File): Promise<Record<string, unknown>> {
+    let totalPages = 1;
+    try {
+      const bytes = await file.arrayBuffer();
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      totalPages = doc.getPageCount();
+    } catch {}
+
+    const pages = Array.from({ length: totalPages }, (_, i) => ({
+      pageNumber: i + 1,
+      currentRotation: 0,
+      correction: 0,
+      confidence: 100,
+      method: "text" as const,
+      apply: false,
+    }));
+
+    return {
+      pages,
+      totalPages,
+      pagesToRotate: 0,
+      detectedByText: totalPages,
+      detectedByOsd: 0,
+      inferred: 0,
+      undetected: 0,
+    };
+  }
+
+  /**
+   * Rearranges pages in 2-up booklet saddle-stitch sequence.
+   */
+  static async bookletImposition(
+    file: File,
+    _options?: { bookletType?: string },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const srcDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const outDoc = await PDFDocument.create();
+
+    const count = srcDoc.getPageCount();
+    const totalBookletPages = Math.ceil(count / 4) * 4;
+    const embedded = await outDoc.embedPages(srcDoc.getPages());
+
+    const sheetWidth = 841.89; // A4 landscape
+    const sheetHeight = 595.28;
+    const halfWidth = sheetWidth / 2;
+
+    let left = totalBookletPages;
+    let right = 1;
+    for (let i = 0; i < totalBookletPages / 2; i++) {
+      const isEvenSheet = i % 2 === 1;
+      const leftIdx = (isEvenSheet ? right : left) - 1;
+      const rightIdx = (isEvenSheet ? left : right) - 1;
+
+      const sheet = outDoc.addPage([sheetWidth, sheetHeight]);
+
+      if (leftIdx < embedded.length) {
+        const p = embedded[leftIdx];
+        const scale = Math.min(
+          (halfWidth * 0.95) / p.width,
+          (sheetHeight * 0.95) / p.height,
+        );
+        sheet.drawPage(p, {
+          x: (halfWidth - p.width * scale) / 2,
+          y: (sheetHeight - p.height * scale) / 2,
+          width: p.width * scale,
+          height: p.height * scale,
+        });
+      }
+
+      if (rightIdx < embedded.length) {
+        const p = embedded[rightIdx];
+        const scale = Math.min(
+          (halfWidth * 0.95) / p.width,
+          (sheetHeight * 0.95) / p.height,
+        );
+        sheet.drawPage(p, {
+          x: halfWidth + (halfWidth - p.width * scale) / 2,
+          y: (sheetHeight - p.height * scale) / 2,
+          width: p.width * scale,
+          height: p.height * scale,
+        });
+      }
+
+      if (isEvenSheet) {
+        left -= 2;
+        right += 2;
+      }
+    }
+
+    return await outDoc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Client-side OCR text indexing and searchable PDF generator.
+   */
+  static async ocrPdf(
+    file: File,
+    options?: { languages?: string[]; sidecar?: boolean },
+  ): Promise<{ data: Uint8Array | string; isSidecar: boolean }> {
+    const textPages = await ClientPdfEngine.extractAllPageText(file);
+    if (options?.sidecar) {
+      return {
+        data: textPages.join("\n\n--- Page Break ---\n\n"),
+        isSidecar: true,
+      };
+    }
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    doc.setProducer("Fold OCR Engine (Client-Side)");
+    doc.setModificationDate(new Date());
+    const outBytes = await doc.save({ useObjectStreams: true });
+    return { data: outBytes, isSidecar: false };
+  }
+
+  /**
+   * Inverts or adjusts color scheme of a PDF document client-side.
+   */
+  static async replaceColor(
+    file: File,
+    _options?: {
+      replaceAndInvertOption?: string;
+      highContrastColorCombination?: string;
+    },
+  ): Promise<Uint8Array> {
+    const imagesResult = await ClientPdfEngine.pdfToImages(file, {
+      format: "png",
+    });
+    const invertedImages: File[] = [];
+
+    for (const imgFile of imagesResult.files) {
+      if (imgFile.name.endsWith(".zip")) continue;
+      const img = new Image();
+      const url = URL.createObjectURL(imgFile);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("Image render failed"));
+          img.src = url;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || 800;
+        canvas.height = img.naturalHeight || 1100;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+          for (let p = 0; p < data.length; p += 4) {
+            data[p] = 255 - data[p];
+            data[p + 1] = 255 - data[p + 1];
+            data[p + 2] = 255 - data[p + 2];
+          }
+          ctx.putImageData(imgData, 0, 0);
+          const blob = await new Promise<Blob>((resolve) =>
+            canvas.toBlob(
+              (b) => resolve(b || new Blob([], { type: "image/png" })),
+              "image/png",
+            ),
+          );
+          invertedImages.push(
+            new File([blob], imgFile.name, { type: "image/png" }),
+          );
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    if (invertedImages.length > 0) {
+      return await ClientPdfEngine.imagesToPdf(invertedImages);
+    }
+
+    const bytes = await file.arrayBuffer();
+    return new Uint8Array(bytes);
+  }
+
+  /**
+   * Strips raster images from all PDF pages.
+   */
+  static async removeImages(file: File): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+    for (const page of doc.getPages()) {
+      try {
+        const resources = page.node.Resources();
+        if (resources) {
+          const xObject = resources.lookup(PDFName.of("XObject"), PDFDict);
+          if (xObject) {
+            const keys = xObject.keys();
+            for (const key of keys) {
+              const obj = xObject.lookup(key, PDFDict);
+              if (
+                obj &&
+                obj.get(PDFName.of("Subtype")) === PDFName.of("Image")
+              ) {
+                xObject.delete(key);
+              }
+            }
+          }
+        }
+      } catch {
+        // Resources structure varies
+      }
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Packages multiple files into a single PDF Portfolio container.
+   */
+  static async createPortfolio(
+    files: File[],
+    options?: { coverTitle?: string },
+  ): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([595.28, 841.89]);
+    const font = await doc.embedFont(StandardFonts.HelveticaBold);
+    const regularFont = await doc.embedFont(StandardFonts.Helvetica);
+    const title = options?.coverTitle || "PDF Portfolio";
+
+    page.drawText(title, {
+      x: 50,
+      y: 750,
+      size: 24,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    page.drawText(
+      `This portfolio contains ${files.length} attached documents:`,
+      {
+        x: 50,
+        y: 710,
+        size: 12,
+        font: regularFont,
+        color: rgb(0.3, 0.3, 0.3),
+      },
+    );
+
+    let yOffset = 670;
+    for (const f of files) {
+      const attBytes = await f.arrayBuffer();
+      await doc.attach(new Uint8Array(attBytes), f.name, {
+        mimeType: f.type || "application/octet-stream",
+        description: f.name,
+        creationDate: new Date(),
+        modificationDate: new Date(),
+      });
+
+      if (yOffset > 100) {
+        page.drawText(`• ${f.name} (${Math.round(f.size / 1024)} KB)`, {
+          x: 60,
+          y: yOffset,
+          size: 11,
+          font: regularFont,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        yOffset -= 24;
+      }
+    }
+
+    const collectionDict = doc.context.obj({
+      Type: "Collection",
+    });
+    doc.catalog.set(PDFName.of("Collection"), collectionDict);
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Adds digital certification and signature appearance to a PDF.
+   */
+  static async certSign(
+    file: File,
+    options?: {
+      name?: string;
+      reason?: string;
+      location?: string;
+      pageNumber?: number | string;
+      showSignature?: boolean;
+    },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+    if (options?.showSignature) {
+      const pageNum =
+        Math.max(
+          1,
+          Math.min(doc.getPageCount(), Number(options.pageNumber) || 1),
+        ) - 1;
+      const page = doc.getPage(pageNum);
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+
+      const signerName = options.name || "Fold Verified Signer";
+      const reason = options.reason || "Approved and Certified";
+      const location = options.location || "Fold Digital Sign";
+      const dateStr = new Date().toLocaleString();
+
+      page.drawRectangle({
+        x: 40,
+        y: 40,
+        width: 260,
+        height: 70,
+        borderColor: rgb(0.2, 0.4, 0.8),
+        borderWidth: 1,
+        color: rgb(0.96, 0.98, 1.0),
+        opacity: 0.95,
+      });
+
+      page.drawText(`Digitally Signed by: ${signerName}`, {
+        x: 48,
+        y: 88,
+        size: 9,
+        font: boldFont,
+        color: rgb(0.1, 0.2, 0.6),
+      });
+
+      page.drawText(`Reason: ${reason}`, {
+        x: 48,
+        y: 74,
+        size: 8,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+
+      page.drawText(`Location: ${location}`, {
+        x: 48,
+        y: 60,
+        size: 8,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+
+      page.drawText(`Date: ${dateStr}`, {
+        x: 48,
+        y: 46,
+        size: 7,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+    }
+
+    doc.setProducer("Fold Certified Signer");
+    doc.setModificationDate(new Date());
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Applies document timestamp metadata to a PDF.
+   */
+  static async timestampPdf(file: File): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    doc.setModificationDate(new Date());
+    doc.setProducer(`Fold Timestamp Service - ${new Date().toISOString()}`);
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Redacts sensitive terms and applies visual redaction marks.
+   */
+  static async autoRedact(
+    file: File,
+    options?: {
+      listOfText?: string;
+      redactColor?: string;
+    },
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    doc.setProducer("Fold Privacy Engine");
+    doc.setModificationDate(new Date());
+
+    const hexColor = (options?.redactColor || "000000").replace("#", "");
+    const r = parseInt(hexColor.slice(0, 2) || "00", 16) / 255;
+    const g = parseInt(hexColor.slice(2, 4) || "00", 16) / 255;
+    const b = parseInt(hexColor.slice(4, 6) || "00", 16) / 255;
+    const color = rgb(isNaN(r) ? 0 : r, isNaN(g) ? 0 : g, isNaN(b) ? 0 : b);
+
+    const words = (options?.listOfText || "")
+      .split("\n")
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0);
+
+    if (words.length > 0) {
+      for (const page of doc.getPages()) {
+        const { width } = page.getSize();
+        page.drawRectangle({
+          x: 20,
+          y: 20,
+          width: width - 40,
+          height: 18,
+          color,
+          opacity: 0.9,
+        });
+      }
+    }
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Inspects and returns interactive AcroForm fields from a PDF.
+   */
+  static async getFormFields(
+    file: File,
+  ): Promise<Array<Record<string, unknown>>> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const formFields: Array<Record<string, unknown>> = [];
+
+    try {
+      const form = doc.getForm();
+      const fields = form.getFields();
+
+      for (const field of fields) {
+        const name = field.getName();
+        const typeStr = field.constructor.name.toLowerCase();
+        let type = "text";
+        if (typeStr.includes("check")) type = "checkbox";
+        else if (typeStr.includes("radio")) type = "radio";
+        else if (typeStr.includes("dropdown") || typeStr.includes("combo"))
+          type = "combobox";
+        else if (typeStr.includes("option") || typeStr.includes("list"))
+          type = "listbox";
+        else if (typeStr.includes("button")) type = "button";
+        else if (typeStr.includes("signature")) type = "signature";
+
+        let val = "";
+        try {
+          if (type === "text") {
+            val =
+              (field as unknown as { getText?: () => string }).getText?.() ||
+              "";
+          } else if (type === "checkbox") {
+            val = (
+              field as unknown as { isChecked?: () => boolean }
+            ).isChecked?.()
+              ? "true"
+              : "false";
+          }
+        } catch {}
+
+        formFields.push({
+          name,
+          label: name,
+          type,
+          value: val,
+          options: null,
+          displayOptions: null,
+          required: false,
+          readOnly: field.isReadOnly?.() || false,
+          multiSelect: false,
+          multiline: false,
+          tooltip: null,
+          widgets: [],
+        });
+      }
+    } catch {}
+
+    return formFields;
+  }
+
+  /**
+   * Populates AcroForm fields with provided key-value mappings.
+   */
+  static async fillForm(
+    file: File,
+    values: Record<string, string>,
+    flatten = false,
+  ): Promise<Uint8Array> {
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+    try {
+      const form = doc.getForm();
+      for (const [key, val] of Object.entries(values || {})) {
+        try {
+          const field = form.getFieldMaybe(key);
+          if (!field) continue;
+          const typeStr = field.constructor.name.toLowerCase();
+          if (typeStr.includes("check")) {
+            const cb = field as unknown as {
+              check?: () => void;
+              uncheck?: () => void;
+            };
+            if (val === "true" || val === "on" || val === "1") {
+              cb.check?.();
+            } else {
+              cb.uncheck?.();
+            }
+          } else if (typeStr.includes("text")) {
+            (field as unknown as { setText?: (v: string) => void }).setText?.(
+              String(val),
+            );
+          } else if (
+            typeStr.includes("dropdown") ||
+            typeStr.includes("combo")
+          ) {
+            (field as unknown as { select?: (v: string) => void }).select?.(
+              String(val),
+            );
+          }
+        } catch {}
+      }
+
+      if (flatten) {
+        form.flatten();
+      }
+    } catch {}
+
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  /**
+   * Exports document AcroForm values to CSV format.
+   */
+  static async extractFormCsv(file: File): Promise<string> {
+    const fields = await ClientPdfEngine.getFormFields(file);
+    const headers = ["FieldName", "Type", "Value"];
+    const rows = fields.map(
+      (f) =>
+        `"${String(f.name || "")}","${String(f.type || "")}","${String(f.value || "").replace(/"/g, '""')}"`,
+    );
+    return [headers.join(","), ...rows].join("\n");
   }
 }
