@@ -15,7 +15,8 @@ import {
   DragMoveEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   pointerWithin,
   rectIntersection,
@@ -467,8 +468,12 @@ export default function PageTracks() {
   );
 
   const sensors = useSensors(
-    // A short distance threshold keeps plain clicks (select) from starting a drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
   );
 
   // Rebuilt per edit rather than scanned per drag-over event: resolving the

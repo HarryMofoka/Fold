@@ -65,3 +65,15 @@
 .sidebar-base__loading {
   padding: 2rem 1rem !important;
 }
+
+@media (max-width: 48rem) {
+  .sidebar-base {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: min(85vw, 20rem) !important;
+    z-index: 1000 !important;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4) !important;
+  }
+}

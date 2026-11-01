@@ -31,6 +31,7 @@ import { ThumbnailSidebar } from "@app/components/viewer/ThumbnailSidebar";
 import { BookmarkSidebar } from "@app/components/viewer/BookmarkSidebar";
 import { AttachmentSidebar } from "@app/components/viewer/AttachmentSidebar";
 import { LayerSidebar } from "@app/components/viewer/LayerSidebar";
+import { useIsMobile } from "@app/hooks/useIsMobile";
 import {
   useNavigationGuard,
   useNavigationState,
@@ -1739,8 +1740,9 @@ const EmbedPdfViewerContent = ({
     isCurrentFileEncrypted,
   ]);
 
-  const sidebarWidthRem = 15;
-  const commentsSidebarWidthRem = 15;
+  const isMobile = useIsMobile();
+  const sidebarWidthRem = isMobile ? 0 : 15;
+  const commentsSidebarWidthRem = isMobile ? 0 : 15;
   const totalRightMargin =
     (isThumbnailSidebarVisible ? sidebarWidthRem : 0) +
     (isBookmarkSidebarVisible ? sidebarWidthRem : 0) +
@@ -1917,7 +1919,7 @@ const EmbedPdfViewerContent = ({
             position: "fixed",
             // Gutter matching the workbench rails, so the bar reads as a
             // floating card rather than one welded to the viewport edge.
-            bottom: "0.5rem",
+            bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
             left: 0,
             right: 0,
             zIndex: 50,

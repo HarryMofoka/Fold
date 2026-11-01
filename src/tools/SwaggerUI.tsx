@@ -241,10 +241,12 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
                         <Group
                           justify="space-between"
                           align="flex-start"
+                          wrap="wrap"
+                          gap="xs"
                           mb="xs"
                         >
-                          <div>
-                            <Group gap="xs" mb={4}>
+                          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                            <Group gap="xs" mb={4} wrap="wrap">
                               <Badge
                                 color={ep.method === "POST" ? "blue" : "teal"}
                                 size="sm"
@@ -255,9 +257,16 @@ const SwaggerUI: React.FC<BaseToolProps> = () => {
                                 {ep.name}
                               </Text>
                             </Group>
-                            <Code>{ep.endpoint}</Code>
+                            <Code style={{ wordBreak: "break-all" }}>
+                              {ep.endpoint}
+                            </Code>
                           </div>
-                          <Badge color="gray" variant="outline" size="xs">
+                          <Badge
+                            color="gray"
+                            variant="outline"
+                            size="xs"
+                            style={{ flexShrink: 0 }}
+                          >
                             {ep.engineMethod}
                           </Badge>
                         </Group>

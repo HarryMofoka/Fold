@@ -1,5 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
 import { Modal, Stack, Text, Box, Alert, Badge } from "@mantine/core";
+import { Button } from "@app/ui/Button";
+import { useIsMobile } from "@app/hooks/useIsMobile";
 import { QRCodeSVG } from "qrcode.react";
 import { Icon } from "@app/ui/Icon";
 import { Z_INDEX_OVER_FILE_MANAGER_MODAL } from "@app/styles/zIndex";
@@ -55,6 +57,19 @@ export default function MobileTransferModal({
   qrSize = 240,
 }: MobileTransferModalProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const directInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDirectSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      void onFileReceived(files[i]);
+    }
+  };
+
+  const effectiveQrSize = isMobile ? Math.min(qrSize, 180) : qrSize;
+
   const {
     mobileUrl,
     filesReceived,
@@ -113,6 +128,41 @@ export default function MobileTransferModal({
           </Alert>
         )}
 
+        {isMobile && (
+          <Box
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="file"
+              ref={directInputRef}
+              accept="image/*,application/pdf"
+              style={{ display: "none" }}
+              multiple
+              onChange={handleDirectSelect}
+            />
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              leftSection={<Icon name="upload" size="1.1rem" />}
+              onClick={() => directInputRef.current?.click()}
+            >
+              {t("mobileTransfer.directUpload", "Upload from this device")}
+            </Button>
+            <Text size="xs" c="dimmed" ta="center">
+              {t(
+                "mobileTransfer.orScanAnother",
+                "Or scan below with another device",
+              )}
+            </Text>
+          </Box>
+        )}
+
         <Box
           style={{
             display: "flex",
@@ -123,7 +173,7 @@ export default function MobileTransferModal({
         >
           <Box
             style={{
-              padding: "1.5rem",
+              padding: isMobile ? "1rem" : "1.5rem",
               background: "white",
               borderRadius: "8px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -131,7 +181,7 @@ export default function MobileTransferModal({
           >
             <QRCodeSVG
               value={mobileUrl}
-              size={qrSize}
+              size={effectiveQrSize}
               level="H"
               includeMargin
               title={qrTitle}

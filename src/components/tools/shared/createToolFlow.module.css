@@ -20,3 +20,9 @@
   box-shadow: 0 var(--mantine-spacing-sm) 0 0
     var(--c-surface, var(--mantine-color-body));
 }
+
+@media (max-width: 48rem) {
+  .executeFooter {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+}

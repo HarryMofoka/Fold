@@ -441,6 +441,13 @@
   pointer-events: auto;
 }
 
+@media (pointer: coarse) {
+  .tile [data-hover-action-menu-mode="cssHover"][data-force-visible="false"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* ── Page view modal ─────────────────────────────────────────────────────── */
 
 .pageViewBody {

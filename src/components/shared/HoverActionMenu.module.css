@@ -25,3 +25,11 @@
 .outside {
   bottom: -8px;
 }
+
+@media (pointer: coarse) {
+  .hoverMenu {
+    min-height: 40px;
+    padding: 6px 10px;
+    gap: 10px;
+  }
+}

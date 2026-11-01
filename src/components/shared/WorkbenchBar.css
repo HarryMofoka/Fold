@@ -415,6 +415,11 @@
     min-height: 44px;
   }
 
+  .workbench-bar-view-btn {
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+
   .workbench-bar-center {
     flex-basis: 100%;
     max-width: 100%;

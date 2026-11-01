@@ -217,6 +217,7 @@ export function PdfViewerToolbar({
             paddingLeft: 4,
             paddingRight: 4,
             boxSizing: "border-box",
+            height: isPhone ? "36px" : undefined,
           },
         }}
       />

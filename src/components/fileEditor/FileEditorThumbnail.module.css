@@ -185,6 +185,13 @@
   pointer-events: auto;
 }
 
+@media (pointer: coarse) {
+  .card [data-hover-action-menu-mode="cssHover"][data-force-visible="false"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Error overlay */
 .errorOverlay {
   position: absolute;

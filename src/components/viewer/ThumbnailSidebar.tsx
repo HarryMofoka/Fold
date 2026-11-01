@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useViewer } from "@app/contexts/ViewerContext";
 import { PrivateContent } from "@app/components/shared/PrivateContent";
 import { Icon } from "@app/ui/Icon";
+import { useIsMobile } from "@app/hooks/useIsMobile";
 import "@app/components/viewer/SidebarBase.css";
 
 interface ThumbnailSidebarProps {
@@ -148,13 +149,31 @@ export function ThumbnailSidebar({
     };
   }, [visible, scrollState.totalPages, thumbnailAPI, scrollState.currentPage]);
 
+  const isMobile = useIsMobile();
+
   const handlePageClick = (pageIndex: number) => {
     const pageNumber = pageIndex + 1; // Convert to 1-based
     scrollActions.scrollToPage(pageNumber);
+    if (isMobile) {
+      onToggle();
+    }
   };
 
   return (
     <>
+      {visible && isMobile && (
+        <div
+          onClick={onToggle}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(2px)",
+            zIndex: 997,
+          }}
+          aria-hidden="true"
+        />
+      )}
       {/* Thumbnail Sidebar */}
       {visible && (
         <Box
@@ -164,7 +183,7 @@ export function ThumbnailSidebar({
             right: 0,
             top: 0,
             bottom: 0,
-            width: "15rem",
+            width: isMobile ? "min(85vw, 20rem)" : "15rem",
             zIndex: 998,
           }}
         >

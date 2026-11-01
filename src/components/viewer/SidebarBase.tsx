@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Box, ScrollArea, Text, TextInput } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 import { ActionIcon } from "@app/ui/ActionIcon";
+import { useIsMobile } from "@app/hooks/useIsMobile";
 import "@app/components/viewer/SidebarBase.css";
 
 import { Icon, isIconName, type IconName } from "@app/ui/Icon";
@@ -52,6 +53,7 @@ export function SidebarBase({
   children,
 }: SidebarBaseProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const resolvedCloseLabel =
     closeLabel ?? t("viewer.sidebar.close", "Close sidebar");
 
@@ -66,61 +68,76 @@ export function SidebarBase({
   );
 
   return (
-    <Box
-      className={["sidebar-base", className].filter(Boolean).join(" ")}
-      style={{
-        position: "fixed",
-        right: rightOffset,
-        top: 0,
-        bottom: 0,
-        width: SIDEBAR_WIDTH,
-        zIndex: 998,
-      }}
-    >
-      <div className="sidebar-base__header">
-        <div className="sidebar-base__header-title">
-          <span className="sidebar-base__header-icon">{renderIcon}</span>
-          <Text fw={600} size="sm" tt="uppercase" lts={0.5}>
-            {title}
-          </Text>
-        </div>
-        <Box style={{ display: "flex", alignItems: "center", gap: 2 }}>
-          {headerActions}
-          {onClose && (
-            <ActionIcon
-              variant="tertiary"
-              accent="neutral"
-              size="sm"
-              onClick={onClose}
-              aria-label={resolvedCloseLabel}
-              title={resolvedCloseLabel}
-            >
-              <Icon name="x" size="1.1rem" />
-            </ActionIcon>
-          )}
-        </Box>
-      </div>
-
-      {onSearchChange !== undefined && (
-        <Box px="sm" pb="sm" className="sidebar-base__search">
-          <TextInput
-            value={searchTerm ?? ""}
-            placeholder={
-              searchPlaceholder ??
-              t("viewer.sidebar.searchPlaceholder", "Search...")
-            }
-            onChange={(e) => onSearchChange(e.currentTarget.value)}
-            leftSection={<Icon name="search" size="1.1rem" />}
-            size="xs"
-          />
-        </Box>
+    <>
+      {isMobile && (
+        <div
+          onClick={onClose}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(2px)",
+            zIndex: 997,
+          }}
+          aria-hidden="true"
+        />
       )}
+      <Box
+        className={["sidebar-base", className].filter(Boolean).join(" ")}
+        style={{
+          position: "fixed",
+          right: isMobile ? "0rem" : rightOffset,
+          top: 0,
+          bottom: 0,
+          width: isMobile ? "min(85vw, 20rem)" : SIDEBAR_WIDTH,
+          zIndex: 998,
+        }}
+      >
+        <div className="sidebar-base__header">
+          <div className="sidebar-base__header-title">
+            <span className="sidebar-base__header-icon">{renderIcon}</span>
+            <Text fw={600} size="sm" tt="uppercase" lts={0.5}>
+              {title}
+            </Text>
+          </div>
+          <Box style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {headerActions}
+            {onClose && (
+              <ActionIcon
+                variant="tertiary"
+                accent="neutral"
+                size="sm"
+                onClick={onClose}
+                aria-label={resolvedCloseLabel}
+                title={resolvedCloseLabel}
+              >
+                <Icon name="x" size="1.1rem" />
+              </ActionIcon>
+            )}
+          </Box>
+        </div>
 
-      <ScrollArea style={{ flex: 1 }} viewportRef={viewportRef}>
-        <Box p="sm" className="sidebar-base__content">
-          {children}
-        </Box>
-      </ScrollArea>
-    </Box>
+        {onSearchChange !== undefined && (
+          <Box px="sm" pb="sm" className="sidebar-base__search">
+            <TextInput
+              value={searchTerm ?? ""}
+              placeholder={
+                searchPlaceholder ??
+                t("viewer.sidebar.searchPlaceholder", "Search...")
+              }
+              onChange={(e) => onSearchChange(e.currentTarget.value)}
+              leftSection={<Icon name="search" size="1.1rem" />}
+              size="xs"
+            />
+          </Box>
+        )}
+
+        <ScrollArea style={{ flex: 1 }} viewportRef={viewportRef}>
+          <Box p="sm" className="sidebar-base__content">
+            {children}
+          </Box>
+        </ScrollArea>
+      </Box>
+    </>
   );
 }

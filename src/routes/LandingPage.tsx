@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EDITOR_BASENAME } from "@app/routes/editorBasename";
+import "@app/styles/landing.css";
 
 export default function LandingPage() {
   const navigate = useNavigate();
