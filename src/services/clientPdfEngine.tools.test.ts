@@ -15,6 +15,12 @@ import { InternalAxiosRequestConfig } from "axios";
 const PNG_1X1_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
+const toFile = (
+  data: Uint8Array,
+  name: string,
+  type = "application/pdf",
+): File => new File([data.buffer as ArrayBuffer], name, { type });
+
 async function createTestPdfWithField(): Promise<{
   file: File;
   docBytes: Uint8Array;
@@ -42,7 +48,7 @@ async function createTestPdfWithField(): Promise<{
   page.node.Annots()?.push(annotRef);
 
   const bytes = await doc.save();
-  const file = new File([bytes], "test_doc.pdf", { type: "application/pdf" });
+  const file = toFile(bytes, "test_doc.pdf");
   return { file, docBytes: bytes };
 }
 
@@ -55,7 +61,7 @@ async function createTestPdfWithImage(): Promise<File> {
   const embeddedImg = await doc.embedPng(imgBytes);
   page.drawImage(embeddedImg, { x: 50, y: 50, width: 100, height: 100 });
   const bytes = await doc.save();
-  return new File([bytes], "image_doc.pdf", { type: "application/pdf" });
+  return toFile(bytes, "image_doc.pdf");
 }
 
 async function createMultiPageTextPdf(): Promise<File> {
@@ -79,7 +85,7 @@ async function createMultiPageTextPdf(): Promise<File> {
   });
 
   const bytes = await doc.save();
-  return new File([bytes], "multipage.pdf", { type: "application/pdf" });
+  return toFile(bytes, "multipage.pdf");
 }
 
 describe("ClientPdfEngine Tools", () => {
@@ -132,9 +138,7 @@ describe("ClientPdfEngine Tools", () => {
       );
 
       const bytes = await doc.save();
-      const file = new File([bytes], "mixed_pages.pdf", {
-        type: "application/pdf",
-      });
+      const file = toFile(bytes, "mixed_pages.pdf");
       const cleanedBytes = await ClientPdfEngine.removeAnnotations(file);
 
       const loaded = await PDFDocument.load(cleanedBytes);
@@ -235,9 +239,7 @@ describe("ClientPdfEngine Tools", () => {
         font,
       });
       const bytes = await doc.save();
-      const file = new File([bytes], "special_chars.pdf", {
-        type: "application/pdf",
-      });
+      const file = toFile(bytes, "special_chars.pdf");
 
       const pptx = await ClientPdfEngine.pdfToPptx(file);
       const zip = await JSZip.loadAsync(await pptx.arrayBuffer());
@@ -549,9 +551,7 @@ describe("ClientPdfAdapter Endpoints", () => {
       location: "Princeton-Plainsboro",
       showSignature: true,
     });
-    const signedFile = new File([signedBytes], "signed.pdf", {
-      type: "application/pdf",
-    });
+    const signedFile = toFile(signedBytes, "signed.pdf");
 
     const sigs = await ClientPdfEngine.validateSignatures(signedFile);
     expect(sigs.length).toBe(1);
@@ -582,15 +582,11 @@ describe("ClientPdfAdapter Endpoints", () => {
       name: "Alice Signer",
       reason: "Approval",
     });
-    const signedFile = new File([signedBytes], "signed.pdf", {
-      type: "application/pdf",
-    });
+    const signedFile = toFile(signedBytes, "signed.pdf");
 
     const strippedBytes =
       await ClientPdfEngine.removeCertificateSign(signedFile);
-    const strippedFile = new File([strippedBytes], "stripped.pdf", {
-      type: "application/pdf",
-    });
+    const strippedFile = toFile(strippedBytes, "stripped.pdf");
 
     const sigs = await ClientPdfEngine.validateSignatures(strippedFile);
     expect(sigs.length).toBe(0);
@@ -623,7 +619,7 @@ describe("ClientPdfAdapter Endpoints", () => {
     });
     doc.catalog.set(PDFName.of("OpenAction"), doc.context.register(jsAction));
     const bytes = await doc.save();
-    const file = new File([bytes], "js_doc.pdf", { type: "application/pdf" });
+    const file = toFile(bytes, "js_doc.pdf");
 
     const report = await ClientPdfEngine.showJavascript(file);
     expect(report.hasJs).toBe(true);
@@ -659,7 +655,7 @@ describe("ClientPdfAdapter Endpoints", () => {
       },
     );
     const bytes = await doc.save();
-    const file = new File([bytes], "invoice.pdf", { type: "application/pdf" });
+    const file = toFile(bytes, "invoice.pdf");
 
     const classification = await ClientPdfEngine.classifyDocument(file);
     expect(classification.labels.length).toBeGreaterThan(0);
@@ -791,9 +787,11 @@ describe("ClientPdfAdapter Endpoints", () => {
         '<worksheet><sheetData><row><c t="s"><v>0</v></c><c t="s"><v>1</v></c></row><row><c><v>50000</v></c><c><v>25000</v></c></row></sheetData></worksheet>',
       );
       const xlsxBuf = await zip.generateAsync({ type: "uint8array" });
-      const xlsxFile = new File([xlsxBuf], "finances.xlsx", {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+      const xlsxFile = toFile(
+        xlsxBuf,
+        "finances.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
 
       const converted = await ClientPdfEngine.universalConvert(
         xlsxFile,
@@ -818,9 +816,11 @@ describe("ClientPdfAdapter Endpoints", () => {
         "<p:sld><cSld><spTree><sp><txBody><a:p><a:r><a:t>Key Achievements &amp; Milestones</a:t></a:r></a:p></txBody></sp></spTree></cSld></p:sld>",
       );
       const pptxBuf = await zip.generateAsync({ type: "uint8array" });
-      const pptxFile = new File([pptxBuf], "presentation.pptx", {
-        type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      });
+      const pptxFile = toFile(
+        pptxBuf,
+        "presentation.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      );
 
       const converted = await ClientPdfEngine.universalConvert(
         pptxFile,
@@ -915,9 +915,7 @@ describe("ClientPdfAdapter Endpoints", () => {
       );
 
       const bytes = await doc.save();
-      const file = new File([bytes], "bloated.pdf", {
-        type: "application/pdf",
-      });
+      const file = toFile(bytes, "bloated.pdf");
 
       const compressed = await ClientPdfEngine.compressPdf(file, {
         optimizeLevel: 9,

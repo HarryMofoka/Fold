@@ -30,10 +30,21 @@
     "scripts/icons/svgrOptions.mts"
   ],
   "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
+    "node_modules",
+    "dist",
+    "src/desktop",
     "src/**/*.spec.ts",
     "src/**/*.spec.tsx",
-    "src/desktop"
+    "src/**/*.saas.test.ts",
+    "src/**/*.saas.test.tsx",
+    "src/portal/views/teamMyCache.saas.test.ts",
+    "src/portal/views/Users.caching.test.tsx",
+    "src/portal/components/users/UsersDirectory.test.tsx",
+    "src/auth/supabase/supabaseClient.test.ts",
+    "src/components/shared/config/configNavSections.test.tsx",
+    "src/components/shared/quickNav/QuickNavHostBridge.state.test.tsx",
+    "src/components/startup/StartupPrompts.test.tsx",
+    "src/contexts/FolderContext.test.tsx",
+    "src/data/ogMetadata.test.ts"
   ]
 }
