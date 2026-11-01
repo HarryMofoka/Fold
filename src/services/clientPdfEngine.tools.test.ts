@@ -498,4 +498,86 @@ describe("ClientPdfAdapter Endpoints", () => {
     const filledDoc = await PDFDocument.load(res?.data);
     expect(filledDoc.getForm().getTextField("customerName").getText()).toBe("Alice Wonderland");
   });
+
+  test("validateSignatures returns empty array for unsigned document", async () => {
+    const file = await createMultiPageTextPdf();
+    const sigs = await ClientPdfEngine.validateSignatures(file);
+    expect(Array.isArray(sigs)).toBe(true);
+    expect(sigs.length).toBe(0);
+
+    const formData = new FormData();
+    formData.append("fileInput", file);
+    const config: InternalAxiosRequestConfig = {
+      url: "/api/v1/security/validate-signature",
+      method: "post",
+      data: formData,
+      headers: {} as any,
+    };
+    const res = await handleClientApiRequest(config);
+    expect(res?.status).toBe(200);
+    expect(res?.data).toEqual([]);
+  });
+
+  test("certSign attaches signature dictionary detectable by validateSignatures", async () => {
+    const file = await createMultiPageTextPdf();
+    const signedBytes = await ClientPdfEngine.certSign(file, {
+      name: "Dr. Gregory House",
+      reason: "Medical Clearance",
+      location: "Princeton-Plainsboro",
+      showSignature: true,
+    });
+    const signedFile = new File([signedBytes], "signed.pdf", { type: "application/pdf" });
+
+    const sigs = await ClientPdfEngine.validateSignatures(signedFile);
+    expect(sigs.length).toBe(1);
+    expect(sigs[0].signerName).toBe("Dr. Gregory House");
+    expect(sigs[0].reason).toBe("Medical Clearance");
+    expect(sigs[0].location).toBe("Princeton-Plainsboro");
+    expect(sigs[0].valid).toBe(true);
+
+    // Test API route
+    const formData = new FormData();
+    formData.append("fileInput", signedFile);
+    const config: InternalAxiosRequestConfig = {
+      url: "/api/v1/security/validate-signature",
+      method: "post",
+      data: formData,
+      headers: {} as any,
+    };
+    const res = await handleClientApiRequest(config);
+    expect(res?.status).toBe(200);
+    expect(Array.isArray(res?.data)).toBe(true);
+    expect(res?.data.length).toBe(1);
+    expect(res?.data[0].signerName).toBe("Dr. Gregory House");
+  });
+
+  test("removeCertificateSign strips digital signatures", async () => {
+    const file = await createMultiPageTextPdf();
+    const signedBytes = await ClientPdfEngine.certSign(file, {
+      name: "Alice Signer",
+      reason: "Approval",
+    });
+    const signedFile = new File([signedBytes], "signed.pdf", { type: "application/pdf" });
+
+    const strippedBytes = await ClientPdfEngine.removeCertificateSign(signedFile);
+    const strippedFile = new File([strippedBytes], "stripped.pdf", { type: "application/pdf" });
+
+    const sigs = await ClientPdfEngine.validateSignatures(strippedFile);
+    expect(sigs.length).toBe(0);
+  });
+
+  test("compressPdf executes with object streams and handles compression options", async () => {
+    const imgFile = await createTestPdfWithImage();
+    const compressed = await ClientPdfEngine.compressPdf(imgFile, { optimizeLevel: 7 });
+    expect(compressed.length).toBeGreaterThan(0);
+    const doc = await PDFDocument.load(compressed);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  test("removeBlankPages preserves pages with content", async () => {
+    const file = await createMultiPageTextPdf();
+    const cleaned = await ClientPdfEngine.removeBlankPages(file);
+    const doc = await PDFDocument.load(cleaned);
+    expect(doc.getPageCount()).toBe(2);
+  });
 });

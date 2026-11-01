@@ -101,11 +101,11 @@ export async function handleClientApiRequest(
         runningProOrHigher: true,
         runningEE: true,
         license: "ENTERPRISE",
-        serverCertificateEnabled: true,
-        storageEnabled: true,
-        storageSharingEnabled: true,
-        storageShareLinksEnabled: true,
-        storageGroupSigningEnabled: true,
+        serverCertificateEnabled: false,
+        storageEnabled: false,
+        storageSharingEnabled: false,
+        storageShareLinksEnabled: false,
+        storageGroupSigningEnabled: false,
         enableAlphaFunctionality: true,
         stirlingOfficeConversion: true,
         enableMobileScanner: true,
@@ -711,7 +711,10 @@ export async function handleClientApiRequest(
     // Compress / Optimize PDF
     if (url.includes("/misc/compress-pdf")) {
       if (!primaryFile) throw new Error("No file provided for compression.");
-      const compressedBytes = await ClientPdfEngine.compressPdf(primaryFile);
+      const compressedBytes = await ClientPdfEngine.compressPdf(
+        primaryFile,
+        params,
+      );
       return makeResponse(
         config,
         compressedBytes,
@@ -916,19 +919,10 @@ export async function handleClientApiRequest(
 
     // Validate Signature
     if (url.includes("/security/validate-signature")) {
-      const result = [
-        {
-          valid: true,
-          chainValid: true,
-          trustValid: true,
-          notExpired: true,
-          coversEntireDocument: true,
-          signerName: "Verified Signature",
-          signatureDate: new Date().toISOString(),
-          reason: "Certified Document",
-          location: "Fold Client Validation",
-        },
-      ];
+      if (!primaryFile) {
+        return makeResponse(config, [], "validation.json", "application/json");
+      }
+      const result = await ClientPdfEngine.validateSignatures(primaryFile);
       return makeResponse(
         config,
         result,
