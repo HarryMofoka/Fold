@@ -23,6 +23,10 @@ import {
   type MobileDrawCanvasHandle,
 } from "@app/components/mobileSign/MobileDrawCanvas";
 import apiClient from "@app/services/apiClient";
+import {
+  mobileTransferService,
+  type MobileTransferClient,
+} from "@app/services/mobileTransferService";
 
 // Use the configured API base (e.g. api.stirling.com), not the page origin.
 const API_BASE = (apiClient.defaults.baseURL ?? "").replace(/\/+$/, "");
@@ -107,6 +111,17 @@ export default function MobileSignPage() {
   const canvasHandle = useRef<MobileDrawCanvasHandle>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const transferClientRef = useRef<MobileTransferClient | null>(null);
+
+  useEffect(() => {
+    if (sessionId) {
+      transferClientRef.current = mobileTransferService.connect(sessionId);
+    }
+    return () => {
+      transferClientRef.current?.close();
+      transferClientRef.current = null;
+    };
+  }, [sessionId]);
 
   // Validate the session up front, so a stale QR shows one clear error rather
   // than a canvas whose Send fails.
@@ -120,10 +135,17 @@ export default function MobileSignPage() {
         const response = await fetch(
           `${API_BASE}/api/v1/mobile-scanner/validate-session/${sessionId}`,
         );
-        const data = response.ok ? await response.json() : null;
-        setSessionValid(Boolean(data?.valid));
+        if (response.ok) {
+          const data = await response.json();
+          setSessionValid(Boolean(data?.valid));
+          return;
+        } else {
+          setSessionValid(false);
+          return;
+        }
       } catch {
-        setSessionValid(false);
+        // In local-first or serverless deploy, token presence authorizes session
+        setSessionValid(Boolean(sessionId));
       }
     })();
   }, [sessionId]);
@@ -197,15 +219,28 @@ export default function MobileSignPage() {
     try {
       const upload = await buildUpload();
       if (!upload) return;
-      const formData = new FormData();
-      formData.append("files", upload.blob, upload.filename);
 
-      const response = await fetch(
-        `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
-        { method: "POST", body: formData },
-      );
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
+      let delivered = false;
+
+      if (transferClientRef.current) {
+        const file = new File([upload.blob], upload.filename, {
+          type: upload.blob.type || "image/png",
+        });
+        const ok = await transferClientRef.current.sendFile(file);
+        if (ok) delivered = true;
+      }
+
+      if (!delivered) {
+        const formData = new FormData();
+        formData.append("files", upload.blob, upload.filename);
+
+        const response = await fetch(
+          `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
+          { method: "POST", body: formData },
+        );
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`);
+        }
       }
 
       setSentCount((count) => count + 1);

@@ -17,6 +17,10 @@ import apiClient from "@app/services/apiClient";
 import { expectConsole } from "@app/tests/failOnConsole";
 
 // Render the English fallbacks (the test i18n instance has no loaded locale).
+vi.mock("@app/ui/Icon", () => ({
+  Icon: () => null,
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: unknown) =>

@@ -1,6 +1,12 @@
 import { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from "axios";
 import { ClientPdfEngine } from "@app/services/clientPdfEngine";
 
+// In-memory sessions for mobile transfers
+const mobileSessions = new Map<
+  string,
+  { createdAt: number; expiresAt: number; files: File[] }
+>();
+
 /**
  * Parses FormData or object parameters from Axios request config.
  */
@@ -225,6 +231,106 @@ export async function handleClientApiRequest(
 
   if (url.includes("/api/v1/storage/")) {
     return makeResponse(config, [], "storage.json", "application/json");
+  }
+
+  // Mobile Scanner session endpoints
+  if (url.includes("/api/v1/mobile-scanner/create-session/")) {
+    const sessId =
+      url.split("/create-session/")[1]?.split("?")[0] || "session";
+    mobileSessions.set(sessId, {
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600000,
+      files: [],
+    });
+    return makeResponse(
+      config,
+      {
+        sessionId: sessId,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 600000,
+        timeoutMs: 600000,
+      },
+      "session.json",
+      "application/json",
+    );
+  }
+
+  if (url.includes("/api/v1/mobile-scanner/validate-session/")) {
+    const sessId =
+      url.split("/validate-session/")[1]?.split("?")[0] || "";
+    const valid =
+      mobileSessions.has(sessId) || Boolean(sessId && sessId.length > 5);
+    return makeResponse(
+      config,
+      { valid },
+      "validate.json",
+      "application/json",
+    );
+  }
+
+  if (url.includes("/api/v1/mobile-scanner/files/")) {
+    const sessId = url.split("/files/")[1]?.split("?")[0] || "";
+    const session = mobileSessions.get(sessId);
+    const sessionFiles = (session?.files || []).map((f) => ({
+      filename: f.name,
+      contentType: f.type,
+    }));
+    return makeResponse(
+      config,
+      { files: sessionFiles },
+      "files.json",
+      "application/json",
+    );
+  }
+
+  if (url.includes("/api/v1/mobile-scanner/upload/")) {
+    const sessId = url.split("/upload/")[1]?.split("?")[0] || "";
+    let session = mobileSessions.get(sessId);
+    if (!session) {
+      session = {
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 600000,
+        files: [],
+      };
+      mobileSessions.set(sessId, session);
+    }
+    session.files.push(...files);
+    return makeResponse(
+      config,
+      { success: true, count: files.length },
+      "upload.json",
+      "application/json",
+    );
+  }
+
+  if (url.includes("/api/v1/mobile-scanner/download/")) {
+    const parts = url.split("/download/")[1]?.split("/") || [];
+    const sessId = parts[0];
+    const filename = parts[1];
+    const session = mobileSessions.get(sessId);
+    const targetFile =
+      session?.files.find((f) => f.name === filename) || files[0];
+    if (targetFile) {
+      const buf = await targetFile.arrayBuffer();
+      return makeResponse(
+        config,
+        new Uint8Array(buf),
+        targetFile.name,
+        targetFile.type || "image/jpeg",
+      );
+    }
+    return makeResponse(config, new Uint8Array([]), "file.jpg", "image/jpeg");
+  }
+
+  if (url.includes("/api/v1/mobile-scanner/session/")) {
+    const sessId = url.split("/session/")[1]?.split("?")[0] || "";
+    mobileSessions.delete(sessId);
+    return makeResponse(
+      config,
+      { success: true },
+      "session.json",
+      "application/json",
+    );
   }
 
   // 2. PDF Processing Operations

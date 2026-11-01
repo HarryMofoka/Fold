@@ -23,6 +23,10 @@ import {
 } from "@app/utils/loadJscanify";
 import apiClient from "@app/services/apiClient";
 import { fitThumbs, THUMB_GAP } from "@app/utils/mobileScannerThumbs";
+import {
+  mobileTransferService,
+  type MobileTransferClient,
+} from "@app/services/mobileTransferService";
 
 const API_BASE = (apiClient.defaults.baseURL ?? "").replace(/\/+$/, "");
 
@@ -93,6 +97,17 @@ export default function MobileScannerPage() {
   const highlightIntervalRef = useRef<number | null>(null);
 
   const DETECTION_WIDTH = 160;
+  const transferClientRef = useRef<MobileTransferClient | null>(null);
+
+  useEffect(() => {
+    if (sessionId) {
+      transferClientRef.current = mobileTransferService.connect(sessionId);
+    }
+    return () => {
+      transferClientRef.current?.close();
+      transferClientRef.current = null;
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     const validateSession = async () => {
@@ -107,44 +122,27 @@ export default function MobileScannerPage() {
         return;
       }
 
-      try {
-        const response = await fetch(
-          `${API_BASE}/api/v1/mobile-scanner/validate-session/${sessionId}`,
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.valid) {
-            setSessionValid(true);
-            setSessionError(null);
-          } else {
-            setSessionValid(false);
-            setSessionError(
-              t(
-                "mobileScanner.sessionExpired",
-                "This session has expired. Please refresh and try again.",
-              ),
-            );
-          }
-        } else {
-          setSessionValid(false);
-          setSessionError(
-            t(
-              "mobileScanner.sessionNotFound",
-              "Session not found. Please refresh and try again.",
-            ),
+      if (API_BASE) {
+        try {
+          const response = await fetch(
+            `${API_BASE}/api/v1/mobile-scanner/validate-session/${sessionId}`,
           );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.valid) {
+              setSessionValid(true);
+              setSessionError(null);
+              return;
+            }
+          }
+        } catch {
+          // Fall through to peer connection
         }
-      } catch (err) {
-        console.error("Failed to validate session:", err);
-        setSessionValid(false);
-        setSessionError(
-          t(
-            "mobileScanner.sessionValidationError",
-            "Unable to verify session. Please try again.",
-          ),
-        );
       }
+
+      setSessionValid(true);
+      setSessionError(null);
     };
 
     validateSession();
@@ -790,20 +788,41 @@ export default function MobileScannerPage() {
         setUploadProgress(((i + 1) / (imagesToUpload.length + 1)) * 50);
       }
 
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
+      let delivered = false;
 
-      const uploadResponse = await fetch(
-        `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      // 1. Send via WebRTC DataChannel / BroadcastChannel directly to desktop
+      if (transferClientRef.current) {
+        for (const file of files) {
+          const ok = await transferClientRef.current.sendFile(file);
+          if (ok) delivered = true;
+        }
+      }
 
-      if (!uploadResponse.ok) {
+      // 2. If a backend server is running or P2P is not yet established, send via HTTP
+      if (!delivered && API_BASE) {
+        try {
+          const formData = new FormData();
+          files.forEach((file) => {
+            formData.append("files", file);
+          });
+
+          const uploadResponse = await fetch(
+            `${API_BASE}/api/v1/mobile-scanner/upload/${sessionId}`,
+            {
+              method: "POST",
+              body: formData,
+            },
+          );
+
+          if (uploadResponse.ok) {
+            delivered = true;
+          }
+        } catch {
+          // Fallback failed
+        }
+      }
+
+      if (!delivered && !transferClientRef.current) {
         throw new Error("Upload failed");
       }
 

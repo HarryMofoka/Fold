@@ -3,6 +3,7 @@ import { BASE_PATH } from "@app/constants/app";
 import { useAppConfig } from "@app/contexts/AppConfigContext";
 import { buildMobileRouteUrl } from "@app/utils/mobileScannerUrl";
 import apiClient from "@app/services/apiClient";
+import { mobileTransferService } from "@app/services/mobileTransferService";
 
 /**
  * Session lifecycle for phone-to-desktop transfer over the mobile-scanner
@@ -214,6 +215,20 @@ export function useMobileTransferSession({
         );
     };
   }, [active, sessionId, createSession]);
+
+  // Direct Peer-to-Peer WebRTC and BroadcastChannel listener for zero-backend transfer
+  useEffect(() => {
+    if (!active || !sessionId) return;
+
+    const host = mobileTransferService.host(sessionId, async (file) => {
+      setFilesReceived((prev) => prev + 1);
+      await onFileReceived(file);
+    });
+
+    return () => {
+      host.close();
+    };
+  }, [active, sessionId, onFileReceived]);
 
   // Poll for uploads while the session is live
   useEffect(() => {

@@ -25,6 +25,10 @@ vi.mock("react-i18next", () => ({
 
 // Branding components pull theme preferences from providers this page doesn't
 // need for its session-state contract.
+vi.mock("@app/ui/Icon", () => ({
+  Icon: () => null,
+}));
+
 vi.mock("@app/components/shared/LogoIcon", () => ({
   LogoIcon: () => <span data-testid="logo" />,
 }));
