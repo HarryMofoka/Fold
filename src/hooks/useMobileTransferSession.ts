@@ -89,6 +89,12 @@ export function useMobileTransferSession({
   const pollIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
   const processedFiles = useRef<Set<string>>(new Set());
+  const onFileReceivedRef = useRef(onFileReceived);
+  const prevActiveRef = useRef(active);
+
+  useEffect(() => {
+    onFileReceivedRef.current = onFileReceived;
+  }, [onFileReceived]);
 
   // The QR-code URL the phone opens. It must land on the public route under
   // the app's base path, otherwise the phone hits the auth-gated catch-all
@@ -171,7 +177,7 @@ export function useMobileTransferSession({
             );
             processedFiles.current.add(fileMetadata.filename);
             setFilesReceived((prev) => prev + 1);
-            await onFileReceived(file);
+            await onFileReceivedRef.current(file);
           }
         } catch (err) {
           console.error(
@@ -196,7 +202,15 @@ export function useMobileTransferSession({
       console.error("[useMobileTransferSession] polling failed:", err);
       setError(pollingErrorMessage);
     }
-  }, [active, sessionId, onFileReceived, pollingErrorMessage]);
+  }, [active, sessionId, pollingErrorMessage]);
+
+  // Regenerate fresh session when modal opens
+  useEffect(() => {
+    if (active && !prevActiveRef.current) {
+      regenerateSession();
+    }
+    prevActiveRef.current = active;
+  }, [active, regenerateSession]);
 
   // Create the session while active; delete it when deactivated/unmounted.
   useEffect(() => {
@@ -223,7 +237,7 @@ export function useMobileTransferSession({
 
     const host = mobileTransferService.host(sessionId, async (file) => {
       setFilesReceived((prev) => prev + 1);
-      await onFileReceived(file);
+      await onFileReceivedRef.current(file);
     });
 
     const unsubscribe = host.onConnectionChange((connected) => {
@@ -235,7 +249,7 @@ export function useMobileTransferSession({
       host.close();
       setIsDeviceConnected(false);
     };
-  }, [active, sessionId, onFileReceived]);
+  }, [active, sessionId]);
 
   // Poll for uploads while the session is live
   useEffect(() => {

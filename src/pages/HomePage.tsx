@@ -1114,6 +1114,13 @@ const MyFilesSidebarOverrides = forwardRef<HTMLDivElement, FileSidebarProps>(
       ? t("filesPage.signInRequired", "Sign in to use cloud storage.")
       : null;
 
+    const handleMobileFilesReceived = useCallback(
+      (files: File[]) => {
+        if (files.length > 0) void handleUpload(files);
+      },
+      [handleUpload],
+    );
+
     return (
       <>
         <FileSidebar
@@ -1175,9 +1182,7 @@ const MyFilesSidebarOverrides = forwardRef<HTMLDivElement, FileSidebarProps>(
         <MobileUploadModal
           opened={mobileUploadOpen}
           onClose={() => setMobileUploadOpen(false)}
-          onFilesReceived={(files) => {
-            if (files.length > 0) void handleUpload(files);
-          }}
+          onFilesReceived={handleMobileFilesReceived}
         />
       </>
     );

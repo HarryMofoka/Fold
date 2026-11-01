@@ -800,7 +800,7 @@ export default function MobileScannerPage() {
       let delivered = false;
 
       if (transferClientRef.current) {
-        const isConnected = await transferClientRef.current.waitForConnection(8000);
+        const isConnected = await transferClientRef.current.waitForConnection(15000);
         if (isConnected || transferClientRef.current.isConnected()) {
           let allSuccess = true;
           for (let i = 0; i < files.length; i++) {

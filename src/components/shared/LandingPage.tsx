@@ -41,11 +41,14 @@ const LandingPage = () => {
     event.target.value = "";
   };
 
-  const handleFilesReceivedFromMobile = async (files: File[]) => {
-    if (files.length > 0) {
-      await addFiles(files);
-    }
-  };
+  const handleFilesReceivedFromMobile = React.useCallback(
+    async (files: File[]) => {
+      if (files.length > 0) {
+        await addFiles(files);
+      }
+    },
+    [addFiles],
+  );
 
   return (
     <Container

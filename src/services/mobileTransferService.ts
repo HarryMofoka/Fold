@@ -134,12 +134,18 @@ export class MobileTransferHost {
       this.peer.on("connection", (conn) => {
         this.connections.add(conn);
 
-        conn.on("open", () => {
+        const handleOpen = () => {
           this.setDeviceConnected(true);
           try {
             conn.send({ type: "PONG" });
           } catch {}
-        });
+        };
+
+        if (conn.open) {
+          handleOpen();
+        } else {
+          conn.on("open", handleOpen);
+        }
 
         conn.on("data", (data) => {
           this.handlePayload(data as TransferMessage, conn);
@@ -397,12 +403,11 @@ export class MobileTransferClient {
       });
 
       this.peer.on("error", (err: { type?: string }) => {
-        if (
-          err?.type === "peer-unavailable" &&
-          !this.closed &&
-          this.connectAttempts < 20
-        ) {
-          this.scheduleRetry(2000);
+        if (err?.type !== "browser-incompatible") {
+          console.warn("[MobileTransferClient] Peer error:", err?.type || err);
+        }
+        if (!this.closed && this.connectAttempts < 30) {
+          this.scheduleRetry(1500);
         }
       });
     } catch {
@@ -417,14 +422,21 @@ export class MobileTransferClient {
 
     try {
       const conn = this.peer.connect(hostId, { reliable: true });
+      this.conn = conn;
 
-      conn.on("open", () => {
+      const handleOpen = () => {
         this.conn = conn;
         this.setStatus("connected");
         try {
           conn.send({ type: "PING" });
         } catch {}
-      });
+      };
+
+      if (conn.open) {
+        handleOpen();
+      } else {
+        conn.on("open", handleOpen);
+      }
 
       conn.on("data", (data) => {
         this.handlePayload(data as TransferMessage);
@@ -433,23 +445,25 @@ export class MobileTransferClient {
       conn.on("close", () => {
         if (this.conn === conn) {
           this.conn = null;
-          if (!this.closed) {
-            this.setStatus("disconnected");
-            this.scheduleRetry(2500);
-          }
+        }
+        if (!this.closed) {
+          this.setStatus("disconnected");
+          this.scheduleRetry(1500);
         }
       });
 
-      conn.on("error", () => {
+      conn.on("error", (err) => {
+        console.warn("[MobileTransferClient] Connection error:", err);
         if (this.conn === conn) {
           this.conn = null;
-          if (!this.closed) {
-            this.scheduleRetry(2500);
-          }
+        }
+        if (!this.closed) {
+          this.setStatus("disconnected");
+          this.scheduleRetry(1500);
         }
       });
     } catch {
-      this.scheduleRetry(3000);
+      this.scheduleRetry(2000);
     }
   }
 
@@ -517,8 +531,12 @@ export class MobileTransferClient {
     );
   }
 
-  public async waitForConnection(timeoutMs = 10000): Promise<boolean> {
+  public async waitForConnection(timeoutMs = 15000): Promise<boolean> {
     if (this.isConnected()) return true;
+
+    if (this.peer && this.peer.open && (!this.conn || !this.conn.open)) {
+      this.connectToHost();
+    }
 
     return new Promise<boolean>((resolve) => {
       let resolved = false;
