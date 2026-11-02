@@ -85,6 +85,52 @@ export class ClientPdfEngine {
     const mergedDoc = await PDFDocument.create();
 
     for (const file of files) {
+      const isImg =
+        file.type.startsWith("image/") ||
+        /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name);
+
+      if (isImg) {
+        let embeddedImage;
+        const isPng =
+          file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+        const isJpg =
+          file.type === "image/jpeg" ||
+          file.name.toLowerCase().endsWith(".jpg") ||
+          file.name.toLowerCase().endsWith(".jpeg");
+
+        if (isPng) {
+          try {
+            const bytes = await file.arrayBuffer();
+            embeddedImage = await mergedDoc.embedPng(bytes);
+          } catch {
+            embeddedImage = null;
+          }
+        } else if (isJpg) {
+          try {
+            const bytes = await file.arrayBuffer();
+            embeddedImage = await mergedDoc.embedJpg(bytes);
+          } catch {
+            embeddedImage = null;
+          }
+        }
+
+        if (!embeddedImage) {
+          const pngFile = await ClientPdfEngine.imageToImage(file, "png");
+          const pngBytes = await pngFile.arrayBuffer();
+          embeddedImage = await mergedDoc.embedPng(pngBytes);
+        }
+
+        const { width, height } = embeddedImage;
+        const page = mergedDoc.addPage([width, height]);
+        page.drawImage(embeddedImage, {
+          x: 0,
+          y: 0,
+          width,
+          height,
+        });
+        continue;
+      }
+
       const bytes = await file.arrayBuffer();
       const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
       const copiedPages = await mergedDoc.copyPages(doc, doc.getPageIndices());

@@ -33,6 +33,10 @@ interface MobileTransferModalProps {
   pollingErrorMessage: string;
   /** Rendered under the QR once files have arrived (e.g. a received-count badge). */
   renderReceived?: (count: number) => ReactNode;
+  /** Optional custom options control (e.g. combine images switch). */
+  optionsNode?: ReactNode;
+  /** Custom handler when Done is clicked. */
+  onDone?: () => void | Promise<void>;
   /** Accessible name for the QR image. Defaults to the modal's own title, which
    *  already names the feature the code belongs to. */
   qrTitle?: string;
@@ -42,6 +46,8 @@ interface MobileTransferModalProps {
 export default function MobileTransferModal({
   opened,
   onClose,
+  onDone,
+  optionsNode,
   routePath,
   onFileReceived,
   title,
@@ -70,14 +76,21 @@ export default function MobileTransferModal({
 
   const effectiveQrSize = isMobile ? Math.min(qrSize, 180) : qrSize;
 
-  const { mobileUrl, filesReceived, error, timeRemaining, showExpiryWarning, isDeviceConnected, isTransferring } =
-    useMobileTransferSession({
-      active: opened,
-      routePath,
-      onFileReceived,
-      sessionCreateErrorMessage,
-      pollingErrorMessage,
-    });
+  const {
+    mobileUrl,
+    filesReceived,
+    error,
+    timeRemaining,
+    showExpiryWarning,
+    isDeviceConnected,
+    isTransferring,
+  } = useMobileTransferSession({
+    active: opened,
+    routePath,
+    onFileReceived,
+    sessionCreateErrorMessage,
+    pollingErrorMessage,
+  });
 
   return (
     <Modal
@@ -94,53 +107,79 @@ export default function MobileTransferModal({
       styles={{ body: { paddingTop: "1.5rem" } }}
     >
       <Stack gap="md">
-        <Alert icon={<Icon name="info" size={"1rem"} />} color="blue" variant="light">
+        <Alert
+          icon={<Icon name="info" size={"1rem"} />}
+          color="blue"
+          variant="light"
+        >
           <Text size="sm">{description}</Text>
         </Alert>
 
         {showExpiryWarning && timeRemaining !== null && (
-          <Alert icon={<Icon name="triangle-alert" size={"1rem"} />} title={expiryWarningTitle} color="orange">
-            <Text size="sm">{formatExpiryWarning(Math.ceil(timeRemaining / 1000))}</Text>
+          <Alert
+            icon={<Icon name="triangle-alert" size={"1rem"} />}
+            title={expiryWarningTitle}
+            color="orange"
+          >
+            <Text size="sm">
+              {formatExpiryWarning(Math.ceil(timeRemaining / 1000))}
+            </Text>
           </Alert>
         )}
 
         {error && (
-          <Alert icon={<Icon name="circle-alert" size={"1rem"} />} title={errorTitle} color="red">
+          <Alert
+            icon={<Icon name="circle-alert" size={"1rem"} />}
+            title={errorTitle}
+            color="red"
+          >
             <Text size="sm">{error}</Text>
           </Alert>
         )}
 
-        {isMobile && (
-          <Box
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.5rem",
-            }}
+        <Box
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+          }}
+        >
+          <input
+            type="file"
+            ref={directInputRef}
+            accept="image/*,application/pdf"
+            style={{ display: "none" }}
+            multiple
+            onChange={handleDirectSelect}
+          />
+          <Button
+            variant="secondary"
+            accent="neutral"
+            size="sm"
+            fullWidth
+            leftSection={<Icon name="upload" size="1.1rem" />}
+            onClick={() => directInputRef.current?.click()}
           >
-            <input
-              type="file"
-              ref={directInputRef}
-              accept="image/*,application/pdf"
-              style={{ display: "none" }}
-              multiple
-              onChange={handleDirectSelect}
-            />
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              leftSection={<Icon name="upload" size="1.1rem" />}
-              onClick={() => directInputRef.current?.click()}
-            >
-              {t("mobileTransfer.directUpload", "Upload from this device")}
-            </Button>
-            <Text size="xs" c="dimmed" ta="center">
-              {t("mobileTransfer.orScanAnother", "Or scan below with another device")}
-            </Text>
-          </Box>
-        )}
+            {isMobile
+              ? t("mobileTransfer.directUpload", "Upload from this device")
+              : t(
+                  "mobileTransfer.uploadFromExplorer",
+                  "Upload images from file explorer",
+                )}
+          </Button>
+          <Text size="xs" c="dimmed" ta="center">
+            {isMobile
+              ? t(
+                  "mobileTransfer.orScanAnother",
+                  "Or scan below with another device",
+                )
+              : t(
+                  "mobileTransfer.orScanFromPhone",
+                  "Or scan below with your phone camera",
+                )}
+          </Text>
+        </Box>
 
         <Box
           style={{
@@ -158,20 +197,44 @@ export default function MobileTransferModal({
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           >
-            <QRCodeSVG value={mobileUrl} size={effectiveQrSize} level="H" includeMargin title={qrTitle} />
+            <QRCodeSVG
+              value={mobileUrl}
+              size={effectiveQrSize}
+              level="H"
+              includeMargin
+              title={qrTitle}
+            />
           </Box>
 
           {isTransferring ? (
-            <Badge variant="filled" color="blue" size="md" leftSection={<Loader size="xs" color="white" />}>
+            <Badge
+              variant="filled"
+              color="blue"
+              size="md"
+              leftSection={<Loader size="xs" color="white" />}
+            >
               {t("mobileTransfer.transferring", "Receiving file…")}
             </Badge>
           ) : isDeviceConnected ? (
-            <Badge variant="filled" color="green" size="md" leftSection={<Icon name="check" size="0.9rem" />}>
+            <Badge
+              variant="filled"
+              color="green"
+              size="md"
+              leftSection={<Icon name="check" size="0.9rem" />}
+            >
               {t("mobileTransfer.deviceConnected", "Phone connected")}
             </Badge>
           ) : (
-            <Badge variant="light" color="gray" size="sm" leftSection={<Icon name="scan" size="0.85rem" />}>
-              {t("mobileTransfer.waitingForScan", "Scan code with phone camera")}
+            <Badge
+              variant="light"
+              color="gray"
+              size="sm"
+              leftSection={<Icon name="scan" size="0.85rem" />}
+            >
+              {t(
+                "mobileTransfer.waitingForScan",
+                "Scan code with phone camera",
+              )}
             </Badge>
           )}
 
@@ -198,13 +261,19 @@ export default function MobileTransferModal({
             {mobileUrl}
           </Text>
 
+          {optionsNode && (
+            <Box style={{ width: "100%", marginTop: "0.25rem" }}>
+              {optionsNode}
+            </Box>
+          )}
+
           {filesReceived > 0 ? (
             <Button
               variant="primary"
               size="md"
               fullWidth
               disabled={isTransferring}
-              onClick={onClose}
+              onClick={onDone ?? onClose}
               leftSection={<Icon name="check" size="1.1rem" />}
             >
               {t("mobileTransfer.doneWithCount", "Done ({{count}} received)", {
@@ -212,7 +281,13 @@ export default function MobileTransferModal({
               })}
             </Button>
           ) : (
-            <Button variant="secondary" accent="neutral" size="sm" fullWidth onClick={onClose}>
+            <Button
+              variant="secondary"
+              accent="neutral"
+              size="sm"
+              fullWidth
+              onClick={onClose}
+            >
               {t("cancel", "Cancel")}
             </Button>
           )}

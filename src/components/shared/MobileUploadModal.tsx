@@ -1,10 +1,11 @@
-import { useCallback } from "react";
-import { Badge } from "@mantine/core";
+import { useCallback, useRef, useState } from "react";
+import { Badge, Switch, Stack } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 import { useAppConfig } from "@app/contexts/AppConfigContext";
 import { Icon } from "@app/ui/Icon";
 import MobileTransferModal from "@app/components/shared/MobileTransferModal";
-import { convertImageToPdf, isImageFile } from "@app/utils/imageToPdfUtils";
+import { ClientPdfEngine } from "@app/services/clientPdfEngine";
+import { isImageFile } from "@app/utils/imageToPdfUtils";
 
 interface MobileUploadModalProps {
   opened: boolean;
@@ -12,12 +13,6 @@ interface MobileUploadModalProps {
   onFilesReceived: (files: File[]) => void;
 }
 
-/**
- * MobileUploadModal
- *
- * Displays a QR code that mobile devices can scan to upload files via backend server.
- * Files are temporarily stored on server and retrieved by desktop.
- */
 export default function MobileUploadModal({
   opened,
   onClose,
@@ -26,44 +21,88 @@ export default function MobileUploadModal({
   const { t } = useTranslation();
   const { config } = useAppConfig();
   const convertToPdf = config?.mobileScannerConvertToPdf !== false;
+  const [combineIntoSinglePdf, setCombineIntoSinglePdf] = useState(true);
+  const receivedFilesRef = useRef<File[]>([]);
 
-  const handleFileReceived = useCallback(
-    async (received: File) => {
-      let file = received;
+  const handleFileReceived = useCallback((received: File) => {
+    receivedFilesRef.current.push(received);
+  }, []);
 
-      // Convert images to PDF if enabled
-      if (isImageFile(file) && convertToPdf) {
-        try {
-          file = await convertImageToPdf(file, {
-            imageResolution: config?.mobileScannerImageResolution as
-              | "full"
-              | "reduced"
-              | undefined,
-            pageFormat: config?.mobileScannerPageFormat as
-              | "keep"
-              | "A4"
-              | "letter"
-              | undefined,
-            stretchToFit: config?.mobileScannerStretchToFit,
-          });
-        } catch (convertError) {
-          console.warn(
-            "[MobileUploadModal] Failed to convert image to PDF, using original file:",
-            convertError,
+  const finalizeFiles = useCallback(async () => {
+    const files = [...receivedFilesRef.current];
+    receivedFilesRef.current = [];
+    if (files.length === 0) return;
+
+    const imageFiles = files.filter(isImageFile);
+    const nonImageFiles = files.filter((f) => !isImageFile(f));
+
+    if (imageFiles.length > 0 && convertToPdf) {
+      try {
+        if (combineIntoSinglePdf) {
+          const pdfBytes = await ClientPdfEngine.imagesToPdf(imageFiles);
+          const combinedPdf = new File(
+            [pdfBytes as unknown as BlobPart],
+            t("mobileUpload.combinedDocumentName", "scanned_document.pdf"),
+            { type: "application/pdf" },
           );
-          // Continue with original image file if conversion fails
+          onFilesReceived([combinedPdf, ...nonImageFiles]);
+        } else {
+          const convertedPdfs: File[] = [];
+          for (const img of imageFiles) {
+            const bytes = await ClientPdfEngine.imagesToPdf([img]);
+            const pdfFilename = img.name.replace(/\.[^.]+$/, ".pdf");
+            convertedPdfs.push(
+              new File([bytes as unknown as BlobPart], pdfFilename, {
+                type: "application/pdf",
+              }),
+            );
+          }
+          onFilesReceived([...convertedPdfs, ...nonImageFiles]);
         }
+      } catch (err) {
+        console.warn(
+          "[MobileUploadModal] Error converting images to PDF:",
+          err,
+        );
+        onFilesReceived(files);
       }
+    } else {
+      onFilesReceived(files);
+    }
+  }, [combineIntoSinglePdf, convertToPdf, onFilesReceived, t]);
 
-      onFilesReceived([file]);
-    },
-    [config, convertToPdf, onFilesReceived],
-  );
+  const handleDone = useCallback(async () => {
+    await finalizeFiles();
+    onClose();
+  }, [finalizeFiles, onClose]);
+
+  const handleClose = useCallback(async () => {
+    if (receivedFilesRef.current.length > 0) {
+      await finalizeFiles();
+    }
+    onClose();
+  }, [finalizeFiles, onClose]);
+
+  const optionsNode = convertToPdf ? (
+    <Stack gap="xs" style={{ width: "100%" }}>
+      <Switch
+        label={t("mobileUpload.combineImages", "Add images into one PDF file")}
+        description={t(
+          "mobileUpload.combineImagesDesc",
+          "Combines all photos into a single multi-page PDF at original quality",
+        )}
+        checked={combineIntoSinglePdf}
+        onChange={(e) => setCombineIntoSinglePdf(e.currentTarget.checked)}
+      />
+    </Stack>
+  ) : null;
 
   return (
     <MobileTransferModal
       opened={opened}
-      onClose={onClose}
+      onClose={handleClose}
+      onDone={handleDone}
+      optionsNode={optionsNode}
       routePath="mobile-scanner"
       onFileReceived={handleFileReceived}
       qrSize={256}

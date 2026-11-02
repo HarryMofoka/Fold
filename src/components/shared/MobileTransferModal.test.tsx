@@ -8,10 +8,19 @@ import * as mobileSessionModule from "@app/hooks/useMobileTransferSession";
 vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
   useTranslation: () => ({
-    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) => {
+    t: (
+      key: string,
+      fallback?: string | Record<string, unknown>,
+      values?: Record<string, unknown>,
+    ) => {
       const options = typeof fallback === "object" ? fallback : values;
-      const text = typeof fallback === "string" ? fallback : String(options?.defaultValue ?? key);
-      return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name] ?? ""));
+      const text =
+        typeof fallback === "string"
+          ? fallback
+          : String(options?.defaultValue ?? key);
+      return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+        String(options?.[name] ?? ""),
+      );
     },
   }),
 }));
@@ -52,7 +61,9 @@ describe("MobileTransferModal", () => {
       </MantineProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Upload from Mobile" })).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: "Upload from Mobile" }),
+    ).toBeDefined();
     expect(screen.getByText("Scan code with phone camera")).toBeDefined();
     const cancelBtn = screen.getByRole("button", { name: "Cancel" });
     expect(cancelBtn).toBeDefined();
@@ -89,7 +100,9 @@ describe("MobileTransferModal", () => {
     expect(screen.getByText("Phone connected")).toBeDefined();
     expect(screen.getByText("3 files received")).toBeDefined();
     expect(
-      screen.getByText("Keep this window open while scanning. You can send multiple files from your phone."),
+      screen.getByText(
+        "Keep this window open while scanning. You can send multiple files from your phone.",
+      ),
     ).toBeDefined();
 
     const doneBtn = screen.getByRole("button", {
@@ -118,7 +131,10 @@ describe("MobileTransferModal", () => {
 
     render(
       <MantineProvider>
-        <MobileTransferModal {...defaultProps} renderReceived={(count) => <span>{count} files received</span>} />
+        <MobileTransferModal
+          {...defaultProps}
+          renderReceived={(count) => <span>{count} files received</span>}
+        />
       </MantineProvider>,
     );
 

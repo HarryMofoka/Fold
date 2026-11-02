@@ -2,7 +2,11 @@ import { Peer, type DataConnection } from "peerjs";
 
 export const CHUNK_SIZE = 16384; // 16 KB standard SCTP packet size
 
-export type TransferStatus = "connecting" | "connected" | "disconnected" | "error";
+export type TransferStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
 export type TransferMessage =
   | { type: "PING" }
@@ -315,7 +319,9 @@ export class MobileTransferHost {
     }
   }
 
-  public onConnectionChange(callback: (connected: boolean) => void): () => void {
+  public onConnectionChange(
+    callback: (connected: boolean) => void,
+  ): () => void {
     this.connectionChangeListeners.add(callback);
     callback(this.isDeviceConnected);
     return () => {
@@ -327,7 +333,9 @@ export class MobileTransferHost {
     return this.isDeviceConnected;
   }
 
-  public onTransferStateChange(callback: (isReceiving: boolean) => void): () => void {
+  public onTransferStateChange(
+    callback: (isReceiving: boolean) => void,
+  ): () => void {
     this.transferStateListeners.add(callback);
     callback(this.pendingTransfers.size > 0);
     return () => {
@@ -538,7 +546,9 @@ export class MobileTransferClient {
     return this.status;
   }
 
-  public onStatusChange(callback: (status: TransferStatus) => void): () => void {
+  public onStatusChange(
+    callback: (status: TransferStatus) => void,
+  ): () => void {
     this.statusListeners.add(callback);
     callback(this.status);
     return () => {
@@ -601,7 +611,10 @@ export class MobileTransferClient {
     }
   }
 
-  public async sendFile(file: File, onProgress?: (percent: number) => void): Promise<boolean> {
+  public async sendFile(
+    file: File,
+    onProgress?: (percent: number) => void,
+  ): Promise<boolean> {
     const isReady = await this.waitForConnection(8000);
     if (!isReady && !this.channel) {
       return false;
@@ -634,7 +647,8 @@ export class MobileTransferClient {
     };
     this.sendRaw(startMsg);
 
-    const dc = (this.conn as unknown as { dataChannel?: RTCDataChannel })?.dataChannel;
+    const dc = (this.conn as unknown as { dataChannel?: RTCDataChannel })
+      ?.dataChannel;
 
     for (let i = 0; i < totalChunks; i++) {
       if (this.closed) return false;
@@ -701,7 +715,10 @@ export class MobileTransferClient {
 }
 
 export const mobileTransferService = {
-  host(sessionId: string, onFileReceived: (file: File) => void | Promise<void>): MobileTransferHost {
+  host(
+    sessionId: string,
+    onFileReceived: (file: File) => void | Promise<void>,
+  ): MobileTransferHost {
     return new MobileTransferHost(sessionId, onFileReceived);
   },
 
